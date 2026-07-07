@@ -18,7 +18,15 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				display: ['Oswald', 'sans-serif'],
+				sans: ['Golos Text', 'sans-serif'],
+			},
 			colors: {
+				electric: '#2B7FFF',
+				aqua: '#18E0C8',
+				ink: '#070B1A',
+				ink2: '#0D1430',
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
@@ -70,25 +78,37 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' }
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' }
+				},
+				'fade-up': {
+					'0%': { opacity: '0', transform: 'translateY(30px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
+				},
+				'float': {
+					'0%,100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-14px)' }
+				},
+				'glow': {
+					'0%,100%': { opacity: '0.5' },
+					'50%': { opacity: '1' }
+				},
+				'blink': {
+					'0%,100%': { opacity: '1' },
+					'50%': { opacity: '0.2' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-up': 'fade-up 0.7s cubic-bezier(0.22,1,0.36,1) both',
+				'float': 'float 6s ease-in-out infinite',
+				'glow': 'glow 4s ease-in-out infinite',
+				'blink': 'blink 1.2s ease-in-out infinite'
 			}
 		}
 	},

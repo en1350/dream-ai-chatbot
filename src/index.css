@@ -3,6 +3,32 @@
 @tailwind utilities;
 
 @layer base {
+  body {
+    font-family: "Golos Text", sans-serif;
+    background: #070b1a;
+  }
+  .grain-bg {
+    background-image:
+      radial-gradient(
+        circle at 20% 20%,
+        rgba(43, 127, 255, 0.14),
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 80% 60%,
+        rgba(24, 224, 200, 0.12),
+        transparent 45%
+      );
+  }
+  .grid-overlay {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 46px 46px;
+  }
+}
+
+@layer base {
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;

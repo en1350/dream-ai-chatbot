@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
   botName: string;
@@ -8,9 +19,11 @@ interface Props {
   previewOpen: boolean;
   onTogglePreview: () => void;
   saveStatus?: "saved" | "saving" | "error";
+  onClear?: () => void;
+  onSaveNow?: () => void;
 }
 
-export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved" }: Props) {
+export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(botName);
   const navigate = useNavigate();
@@ -70,12 +83,43 @@ export default function BuilderTopbar({ botName, onRename, previewOpen, onToggle
 
       <div className="flex-1" />
 
-      <button className="hidden sm:flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-        <Icon name="Undo2" size={15} />
-      </button>
-      <button className="hidden sm:flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-        <Icon name="Redo2" size={15} />
-      </button>
+      {onClear && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button className="flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+              <Icon name="Eraser" size={15} />
+              <span className="hidden sm:inline">Очистить поле</span>
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="bg-ink2 border-white/10 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Очистить сценарий?</AlertDialogTitle>
+              <AlertDialogDescription className="text-white/50">
+                Все блоки и связи будут удалены с холста. Это действие нельзя отменить.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
+                Отмена
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={onClear} className="bg-red-500 text-white hover:bg-red-600">
+                Очистить
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {onSaveNow && (
+        <button
+          onClick={onSaveNow}
+          className="flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <Icon name="Save" size={15} />
+          <span className="hidden sm:inline">Сохранить</span>
+        </button>
+      )}
+
       <div className="w-px h-5 bg-white/10 shrink-0" />
 
       <button

@@ -88,6 +88,20 @@ const BotBuilder = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [botId]);
 
+  const saveNow = useCallback(() => {
+    if (!realBotId) return;
+    setSaveStatus("saving");
+    fetch(func2url["bot-scenario"], {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ botId: realBotId, name: botName, nodes, edges }),
+    })
+      .then((res) => res.json())
+      .then((data) => setSaveStatus(data.success ? "saved" : "error"))
+      .catch(() => setSaveStatus("error"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realBotId, botName, nodes, edges]);
+
   // Автосохранение с debounce при изменении сценария
   useEffect(() => {
     if (loading || !realBotId) return;
@@ -112,6 +126,13 @@ const BotBuilder = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges, botName, realBotId, loading]);
+
+  const clearScenario = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setNodes([]);
+    setEdges([]);
+    setSelectedId(null);
+  }, []);
 
   const addNode = useCallback((subtype: string, x?: number, y?: number) => {
     const def = NODE_DEF_MAP[subtype];
@@ -216,6 +237,8 @@ const BotBuilder = () => {
         previewOpen={previewOpen}
         onTogglePreview={() => setPreviewOpen((v) => !v)}
         saveStatus={saveStatus}
+        onClear={clearScenario}
+        onSaveNow={saveNow}
       />
       <div className="flex flex-1 min-h-0">
         <NodePalette onAddNode={(subtype) => addNode(subtype)} onOpenAiModal={() => setAiModalOpen(true)} />

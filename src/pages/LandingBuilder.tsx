@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LandingTopbar from "@/components/landing-builder/LandingTopbar";
 import BlockPalette from "@/components/landing-builder/BlockPalette";
@@ -77,6 +77,28 @@ const LandingBuilder = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [landingId]);
 
+  const saveNow = useCallback(() => {
+    if (!realId) return;
+    setSaveStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    fetch(func2url["landings"], {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: realId, name, slug, blocks, theme, published, botId }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.landing) {
+          setSlug(data.landing.slug);
+          setSaveStatus("saved");
+        } else {
+          setSaveStatus("error");
+        }
+      })
+      .catch(() => setSaveStatus("error"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realId, name, slug, blocks, theme, published, botId]);
+
   useEffect(() => {
     if (loading || !realId) return;
     if (isFirstRun.current) {
@@ -107,6 +129,12 @@ const LandingBuilder = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [blocks, theme, name, slug, published, botId, realId, loading]);
+
+  const clearLanding = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setBlocks([]);
+    setSelectedIndex(null);
+  }, []);
 
   const addBlock = (block: LandingBlock) => {
     setBlocks((bs) => [...bs, block]);
@@ -159,6 +187,8 @@ const LandingBuilder = () => {
         published={published}
         onTogglePublish={togglePublish}
         saveStatus={saveStatus}
+        onClear={clearLanding}
+        onSaveNow={saveNow}
       />
       <div className="flex flex-1 min-h-0">
         <BlockPalette onAddBlock={addBlock} />

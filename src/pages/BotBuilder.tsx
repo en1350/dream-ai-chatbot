@@ -4,7 +4,8 @@ import NodePalette from "@/components/builder/NodePalette";
 import Canvas from "@/components/builder/Canvas";
 import NodeInspector from "@/components/builder/NodeInspector";
 import LivePreview from "@/components/builder/LivePreview";
-import { BotNode, BotEdge } from "@/components/builder/types";
+import AiScenarioModal from "@/components/builder/AiScenarioModal";
+import { BotNode, BotEdge, NodeCategory } from "@/components/builder/types";
 import { NODE_DEF_MAP } from "@/components/builder/nodeDefs";
 
 let idCounter = 100;
@@ -26,6 +27,7 @@ const BotBuilder = () => {
   const [edges, setEdges] = useState<BotEdge[]>(initialEdges);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(true);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const addNode = useCallback((subtype: string, x?: number, y?: number) => {
     const def = NODE_DEF_MAP[subtype];
@@ -68,6 +70,34 @@ const BotBuilder = () => {
     });
   };
 
+  const applyAiScenario = (data: {
+    nodes: { id: string; subtype: string; category: string; title: string; text: string }[];
+    edges: { source: string; target: string }[];
+  }) => {
+    const idMap: Record<string, string> = {};
+    const newNodes: BotNode[] = data.nodes.map((n, i) => {
+      const id = uid();
+      idMap[n.id] = id;
+      return {
+        id,
+        subtype: n.subtype,
+        category: n.category as NodeCategory,
+        title: n.title,
+        text: n.text,
+        buttons: [],
+        x: 80,
+        y: 60 + i * 220,
+      };
+    });
+    const newEdges: BotEdge[] = data.edges
+      .filter((e) => idMap[e.source] && idMap[e.target])
+      .map((e) => ({ id: `e${Date.now()}${Math.random()}`, source: idMap[e.source], target: idMap[e.target] }));
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+    setSelectedId(null);
+  };
+
   const selected = nodes.find((n) => n.id === selectedId) || null;
 
   return (
@@ -79,7 +109,7 @@ const BotBuilder = () => {
         onTogglePreview={() => setPreviewOpen((v) => !v)}
       />
       <div className="flex flex-1 min-h-0">
-        <NodePalette onAddNode={(subtype) => addNode(subtype)} />
+        <NodePalette onAddNode={(subtype) => addNode(subtype)} onOpenAiModal={() => setAiModalOpen(true)} />
         <Canvas
           nodes={nodes}
           edges={edges}
@@ -107,6 +137,9 @@ const BotBuilder = () => {
           />
         )}
       </div>
+      {aiModalOpen && (
+        <AiScenarioModal onClose={() => setAiModalOpen(false)} onGenerated={applyAiScenario} />
+      )}
     </div>
   );
 };

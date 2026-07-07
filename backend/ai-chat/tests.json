@@ -1,0 +1,18 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Chat reply",
+      "method": "POST",
+      "path": "/",
+      "body": { "prompt": "Ты консультант барбершопа", "history": [{ "from": "user", "text": "Привет" }] },
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -5,11 +5,12 @@ import { NodeCategory } from "./types";
 
 interface Props {
   onAddNode: (subtype: string) => void;
+  onOpenAiModal: () => void;
 }
 
 const ORDER: NodeCategory[] = ["trigger", "message", "logic", "data", "ai", "integration"];
 
-export default function NodePalette({ onAddNode }: Props) {
+export default function NodePalette({ onAddNode, onOpenAiModal }: Props) {
   const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -87,7 +88,10 @@ export default function NodePalette({ onAddNode }: Props) {
       </div>
 
       <div className="p-3 border-t border-white/8">
-        <button className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-electric/20 to-aqua/20 border border-white/10 text-white text-sm hover:border-electric/40 transition-colors">
+        <button
+          onClick={onOpenAiModal}
+          className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-gradient-to-r from-electric/20 to-aqua/20 border border-white/10 text-white text-sm hover:border-electric/40 transition-colors"
+        >
           <Icon name="Sparkles" size={16} className="text-aqua shrink-0" />
           Собрать сценарий с AI
         </button>

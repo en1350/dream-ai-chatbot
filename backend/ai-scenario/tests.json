@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Missing description returns 400",
+      "method": "POST",
+      "path": "/",
+      "body": {},
+      "expectedStatus": 400
+    },
+    {
+      "name": "Generate scenario from description",
+      "method": "POST",
+      "path": "/",
+      "body": { "description": "бот для записи в барбершоп" },
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

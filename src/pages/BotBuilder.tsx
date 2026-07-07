@@ -1,36 +1,117 @@
-import { useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import BuilderTopbar from "@/components/builder/BuilderTopbar";
 import NodePalette from "@/components/builder/NodePalette";
 import Canvas from "@/components/builder/Canvas";
 import NodeInspector from "@/components/builder/NodeInspector";
 import LivePreview from "@/components/builder/LivePreview";
 import AiScenarioModal from "@/components/builder/AiScenarioModal";
+import Icon from "@/components/ui/icon";
 import { BotNode, BotEdge, NodeCategory } from "@/components/builder/types";
 import { NODE_DEF_MAP } from "@/components/builder/nodeDefs";
+import func2url from "../../backend/func2url.json";
 
 let idCounter = 100;
 const uid = () => `n${idCounter++}`;
 
-const initialNodes: BotNode[] = [
-  { id: "n1", subtype: "start", category: "trigger", title: "Старт диалога", text: "Здравствуйте! 👋 Я бот салона «Локон». На какую услугу записать?", buttons: ["Стрижка", "Окрашивание", "Маникюр"], x: 80, y: 60 },
-  { id: "n2", subtype: "save-var", category: "data", title: "Спросить телефон", text: "Отлично! Оставьте номер телефона, и мы закрепим время", buttons: [], x: 80, y: 300 },
-  { id: "n3", subtype: "crm", category: "integration", title: "Отправить в CRM", text: "amoCRM: новая заявка на запись", buttons: [], x: 80, y: 500 },
-];
-const initialEdges: BotEdge[] = [
-  { id: "e1", source: "n1", target: "n2" },
-  { id: "e2", source: "n2", target: "n3" },
-];
+type SaveStatus = "saved" | "saving" | "error";
 
 const BotBuilder = () => {
   const { botId } = useParams();
+  const navigate = useNavigate();
   const isNew = botId === "new";
-  const [botName, setBotName] = useState(isNew ? "Новый бот" : "Салон «Локон»");
-  const [nodes, setNodes] = useState<BotNode[]>(isNew ? [] : initialNodes);
-  const [edges, setEdges] = useState<BotEdge[]>(isNew ? [] : initialEdges);
+
+  const [realBotId, setRealBotId] = useState<number | null>(null);
+  const [botName, setBotName] = useState("Новый бот");
+  const [nodes, setNodes] = useState<BotNode[]>([]);
+  const [edges, setEdges] = useState<BotEdge[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(true);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [loading, setLoading] = useState(!isNew);
+  const [loadError, setLoadError] = useState("");
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRun = useRef(true);
+
+  // Создание нового бота в БД или загрузка существующего сценария
+  useEffect(() => {
+    if (isNew) {
+      fetch(func2url["bots"], {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Новый бот", description: "" }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.bot) {
+            setRealBotId(data.bot.id);
+            navigate(`/builder/${data.bot.id}`, { replace: true });
+          }
+        })
+        .catch(() => setLoadError("Не удалось создать бота"));
+      return;
+    }
+
+    if (!botId || !/^\d+$/.test(botId)) {
+      setLoadError("Бот не найден");
+      setLoading(false);
+      return;
+    }
+
+    fetch(`${func2url["bot-scenario"]}?bot_id=${botId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) {
+          setLoadError(data.error);
+          return;
+        }
+        setRealBotId(data.bot.id);
+        setBotName(data.bot.name);
+        setNodes(
+          data.nodes.map((n: any) => ({
+            id: n.id,
+            subtype: n.subtype,
+            category: n.category,
+            title: n.title,
+            text: n.text,
+            buttons: n.buttons || [],
+            x: n.x,
+            y: n.y,
+          }))
+        );
+        setEdges(data.edges.map((e: any) => ({ id: e.id, source: e.source, target: e.target })));
+      })
+      .catch(() => setLoadError("Не удалось загрузить сценарий"))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [botId]);
+
+  // Автосохранение с debounce при изменении сценария
+  useEffect(() => {
+    if (loading || !realBotId) return;
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
+    setSaveStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch(func2url["bot-scenario"], {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botId: realBotId, name: botName, nodes, edges }),
+      })
+        .then((res) => res.json())
+        .then((data) => setSaveStatus(data.success ? "saved" : "error"))
+        .catch(() => setSaveStatus("error"));
+    }, 800);
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges, botName, realBotId, loading]);
 
   const addNode = useCallback((subtype: string, x?: number, y?: number) => {
     const def = NODE_DEF_MAP[subtype];
@@ -103,6 +184,30 @@ const BotBuilder = () => {
 
   const selected = nodes.find((n) => n.id === selectedId) || null;
 
+  if (loadError) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-ink text-white gap-4">
+        <Icon name="TriangleAlert" size={32} className="text-amber-400" />
+        <p className="text-white/60">{loadError}</p>
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/15 text-sm transition-colors"
+        >
+          Вернуться к списку ботов
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-ink text-white gap-3">
+        <Icon name="Loader2" size={20} className="animate-spin text-aqua" />
+        <span className="text-white/60 text-sm">Загружаю сценарий…</span>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-ink text-white overflow-hidden">
       <BuilderTopbar
@@ -110,6 +215,7 @@ const BotBuilder = () => {
         onRename={setBotName}
         previewOpen={previewOpen}
         onTogglePreview={() => setPreviewOpen((v) => !v)}
+        saveStatus={saveStatus}
       />
       <div className="flex flex-1 min-h-0">
         <NodePalette onAddNode={(subtype) => addNode(subtype)} onOpenAiModal={() => setAiModalOpen(true)} />

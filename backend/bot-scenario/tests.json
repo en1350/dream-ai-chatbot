@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Missing bot_id returns 400",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400
+    },
+    {
+      "name": "Get existing bot scenario",
+      "method": "GET",
+      "path": "/?bot_id=1",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

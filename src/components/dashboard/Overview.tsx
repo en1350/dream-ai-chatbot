@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import func2url from "../../../backend/func2url.json";
 
 const kpis = [
   { label: "Активных ботов", value: "4", delta: "+1", icon: "Bot", up: true },
@@ -16,12 +18,12 @@ const limits = [
   { label: "Боты", cur: 4, max: 5, color: "from-aqua to-electric" },
 ];
 
-const bots = [
-  { id: "1", name: "Салон «Локон»", dialogs: 512, status: "online" },
-  { id: "2", name: "Автосервис RPM", dialogs: 388, status: "online" },
-  { id: "3", name: "Кофейня Bloom", dialogs: 241, status: "warn" },
-  { id: "4", name: "Фитнес Pulse", dialogs: 143, status: "online" },
-];
+interface RealBot {
+  id: number;
+  name: string;
+  dialogsCount: number;
+  status: string;
+}
 
 const events = [
   { icon: "UserPlus", text: "Новый лид +7 (923) •••-45-12", time: "2 мин", color: "text-aqua" },
@@ -46,6 +48,16 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 export default function Overview() {
   const doneCount = checklist.filter((c) => c.done).length;
   const navigate = useNavigate();
+  const [bots, setBots] = useState<RealBot[]>([]);
+  const [botsLoading, setBotsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(func2url["bots"])
+      .then((res) => res.json())
+      .then((data) => setBots(data.bots || []))
+      .finally(() => setBotsLoading(false));
+  }, []);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -136,25 +148,45 @@ export default function Overview() {
         {/* Top bots */}
         <Card className="lg:col-span-2">
           <h3 className="text-white font-semibold mb-5">Топ ботов</h3>
-          <div className="space-y-3">
-            {bots.map((b) => (
+          {botsLoading && (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-[52px] rounded-xl bg-white/5 animate-pulse" />
+              ))}
+            </div>
+          )}
+          {!botsLoading && bots.length === 0 && (
+            <div className="text-center py-6">
+              <p className="text-white/40 text-sm mb-4">У вас пока нет ботов</p>
               <button
-                key={b.id}
-                onClick={() => navigate(`/builder/${b.id}`)}
-                className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors text-left"
+                onClick={() => navigate("/builder/new")}
+                className="text-sm text-electric hover:text-aqua transition-colors"
               >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-electric/30 to-aqua/30 flex items-center justify-center">
-                  <Icon name="Bot" size={16} className="text-aqua" />
-                </div>
-                <span className="text-white text-sm flex-1">{b.name}</span>
-                <span className="text-white/50 text-sm">{b.dialogs} диалогов</span>
-                <span className={`flex items-center gap-1.5 text-xs ${b.status === "online" ? "text-aqua" : "text-amber-400"}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${b.status === "online" ? "bg-aqua" : "bg-amber-400"}`} />
-                  {b.status === "online" ? "онлайн" : "ошибка"}
-                </span>
+                Создать первого бота →
               </button>
-            ))}
-          </div>
+            </div>
+          )}
+          {!botsLoading && bots.length > 0 && (
+            <div className="space-y-3">
+              {bots.slice(0, 5).map((b) => (
+                <button
+                  key={b.id}
+                  onClick={() => navigate(`/builder/${b.id}`)}
+                  className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors text-left"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-electric/30 to-aqua/30 flex items-center justify-center">
+                    <Icon name="Bot" size={16} className="text-aqua" />
+                  </div>
+                  <span className="text-white text-sm flex-1 truncate">{b.name}</span>
+                  <span className="text-white/50 text-sm shrink-0">{b.dialogsCount} диалогов</span>
+                  <span className={`flex items-center gap-1.5 text-xs shrink-0 ${b.status === "active" ? "text-aqua" : "text-white/40"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${b.status === "active" ? "bg-aqua" : "bg-white/30"}`} />
+                    {b.status === "active" ? "онлайн" : "черновик"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* Onboarding */}

@@ -1,4 +1,6 @@
 {
+  "bots": "https://functions.poehali.dev/ff23d6b4-0fec-41a7-b197-04b2ae4deae6",
+  "bot-scenario": "https://functions.poehali.dev/3e9a1ae3-89a5-4477-ab9b-6584d085992b",
   "ai-chat": "https://functions.poehali.dev/876b2b70-5fee-4ff4-8ff7-aa4f0cfba757",
   "ai-scenario": "https://functions.poehali.dev/1bf3d839-ed16-419a-9bc5-52193709fdf6"
 }

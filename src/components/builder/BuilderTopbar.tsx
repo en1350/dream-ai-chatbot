@@ -7,9 +7,10 @@ interface Props {
   onRename: (name: string) => void;
   previewOpen: boolean;
   onTogglePreview: () => void;
+  saveStatus?: "saved" | "saving" | "error";
 }
 
-export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview }: Props) {
+export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved" }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(botName);
   const navigate = useNavigate();
@@ -51,9 +52,21 @@ export default function BuilderTopbar({ botName, onRename, previewOpen, onToggle
         )}
       </div>
 
-      <span className="flex items-center gap-1.5 text-xs text-aqua/80 bg-aqua/10 px-2.5 py-1 rounded-full shrink-0">
-        <Icon name="Check" size={11} /> Сохранено
-      </span>
+      {saveStatus === "saving" && (
+        <span className="flex items-center gap-1.5 text-xs text-white/50 bg-white/5 px-2.5 py-1 rounded-full shrink-0">
+          <Icon name="Loader2" size={11} className="animate-spin" /> Сохраняю…
+        </span>
+      )}
+      {saveStatus === "saved" && (
+        <span className="flex items-center gap-1.5 text-xs text-aqua/80 bg-aqua/10 px-2.5 py-1 rounded-full shrink-0">
+          <Icon name="Check" size={11} /> Сохранено
+        </span>
+      )}
+      {saveStatus === "error" && (
+        <span className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full shrink-0">
+          <Icon name="TriangleAlert" size={11} /> Ошибка сохранения
+        </span>
+      )}
 
       <div className="flex-1" />
 

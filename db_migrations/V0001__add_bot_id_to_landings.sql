@@ -1,0 +1,1 @@
+ALTER TABLE landings ADD COLUMN IF NOT EXISTS bot_id integer REFERENCES bots(id);

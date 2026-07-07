@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Missing slug returns 400",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 400
+    },
+    {
+      "name": "Unknown slug returns 404",
+      "method": "GET",
+      "path": "/?slug=unknown-slug-xyz",
+      "expectedStatus": 404
+    }
+  ]
+}

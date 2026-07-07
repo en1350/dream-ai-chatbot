@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 const kpis = [
@@ -16,10 +17,10 @@ const limits = [
 ];
 
 const bots = [
-  { name: "Салон «Локон»", dialogs: 512, status: "online" },
-  { name: "Автосервис RPM", dialogs: 388, status: "online" },
-  { name: "Кофейня Bloom", dialogs: 241, status: "warn" },
-  { name: "Фитнес Pulse", dialogs: 143, status: "online" },
+  { id: "1", name: "Салон «Локон»", dialogs: 512, status: "online" },
+  { id: "2", name: "Автосервис RPM", dialogs: 388, status: "online" },
+  { id: "3", name: "Кофейня Bloom", dialogs: 241, status: "warn" },
+  { id: "4", name: "Фитнес Pulse", dialogs: 143, status: "online" },
 ];
 
 const events = [
@@ -44,6 +45,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 
 export default function Overview() {
   const doneCount = checklist.filter((c) => c.done).length;
+  const navigate = useNavigate();
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -51,7 +53,10 @@ export default function Overview() {
           <h1 className="font-display text-3xl text-white">Обзор аккаунта</h1>
           <p className="text-white/50 text-sm mt-1">Добро пожаловать, Алексей 👋</p>
         </div>
-        <button className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-electric to-aqua text-ink font-semibold text-sm hover:shadow-[0_0_30px_rgba(43,127,255,0.4)] transition-all">
+        <button
+          onClick={() => navigate("/builder/new")}
+          className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-electric to-aqua text-ink font-semibold text-sm hover:shadow-[0_0_30px_rgba(43,127,255,0.4)] transition-all"
+        >
           <Icon name="Plus" size={18} /> Новый бот
         </button>
       </div>
@@ -133,7 +138,11 @@ export default function Overview() {
           <h3 className="text-white font-semibold mb-5">Топ ботов</h3>
           <div className="space-y-3">
             {bots.map((b) => (
-              <div key={b.name} className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer">
+              <button
+                key={b.id}
+                onClick={() => navigate(`/builder/${b.id}`)}
+                className="w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/5 transition-colors text-left"
+              >
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-electric/30 to-aqua/30 flex items-center justify-center">
                   <Icon name="Bot" size={16} className="text-aqua" />
                 </div>
@@ -143,7 +152,7 @@ export default function Overview() {
                   <span className={`w-1.5 h-1.5 rounded-full ${b.status === "online" ? "bg-aqua" : "bg-amber-400"}`} />
                   {b.status === "online" ? "онлайн" : "ошибка"}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         </Card>

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import BuilderTopbar from "@/components/builder/BuilderTopbar";
 import NodePalette from "@/components/builder/NodePalette";
 import Canvas from "@/components/builder/Canvas";
@@ -22,9 +23,11 @@ const initialEdges: BotEdge[] = [
 ];
 
 const BotBuilder = () => {
-  const [botName, setBotName] = useState("Салон «Локон»");
-  const [nodes, setNodes] = useState<BotNode[]>(initialNodes);
-  const [edges, setEdges] = useState<BotEdge[]>(initialEdges);
+  const { botId } = useParams();
+  const isNew = botId === "new";
+  const [botName, setBotName] = useState(isNew ? "Новый бот" : "Салон «Локон»");
+  const [nodes, setNodes] = useState<BotNode[]>(isNew ? [] : initialNodes);
+  const [edges, setEdges] = useState<BotEdge[]>(isNew ? [] : initialEdges);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(true);
   const [aiModalOpen, setAiModalOpen] = useState(false);

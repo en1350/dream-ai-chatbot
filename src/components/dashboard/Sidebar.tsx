@@ -64,6 +64,15 @@ export default function Sidebar({ active, onSelect }: Props) {
       <div className="my-4 h-px bg-white/8" />
       <nav className="flex flex-col gap-1">
         {bottom.map((i) => <Item key={i.id} item={i} />)}
+        <button
+          onClick={() => nav2("/help")}
+          className="flex items-center gap-3 w-full h-11 px-3.5 rounded-xl text-white/55 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <Icon name="HelpCircle" size={20} />
+          <span className={`text-sm whitespace-nowrap transition-all ${open ? "opacity-100" : "opacity-0 w-0"}`}>
+            Справка
+          </span>
+        </button>
       </nav>
 
       <div className="mt-auto flex flex-col gap-1">

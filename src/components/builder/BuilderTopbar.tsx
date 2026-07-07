@@ -83,6 +83,15 @@ export default function BuilderTopbar({ botName, onRename, previewOpen, onToggle
 
       <div className="flex-1" />
 
+      <button
+        onClick={() => navigate("/help")}
+        className="flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        title="Справка по конструктору"
+      >
+        <Icon name="HelpCircle" size={15} />
+        <span className="hidden sm:inline">Справка</span>
+      </button>
+
       {onClear && (
         <AlertDialog>
           <AlertDialogTrigger asChild>

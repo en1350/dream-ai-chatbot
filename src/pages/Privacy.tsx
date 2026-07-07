@@ -45,6 +45,11 @@ const Privacy = () => {
             <h2 className="text-white font-semibold mb-2">7. Изменения политики</h2>
             <p>При существенных изменениях политики мы уведомим вас через интерфейс сервиса или по email.</p>
           </section>
+          <section>
+            <h2 className="text-white font-semibold mb-2">8. Контакты</h2>
+            <p>По вопросам обработки персональных данных пишите на <a href="mailto:bot-flow@bot-flow.ru" className="text-aqua hover:underline">bot-flow@bot-flow.ru</a>.</p>
+            <p className="mt-2 text-white/50">ИНН 110105729752</p>
+          </section>
         </div>
       </div>
     </div>

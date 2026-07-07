@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 export default function Footer() {
@@ -27,17 +28,21 @@ export default function Footer() {
           <div>
             <div className="text-white font-medium mb-4 text-sm">Контакты</div>
             <ul className="space-y-2.5 text-sm text-white/50">
-              <li className="flex items-center gap-2"><Icon name="Mail" size={15} /> hello@botvk.ru</li>
+              <li>
+                <a href="mailto:bot-flow@bot-flow.ru" className="flex items-center gap-2 hover:text-white transition-colors">
+                  <Icon name="Mail" size={15} /> bot-flow@bot-flow.ru
+                </a>
+              </li>
               <li className="flex items-center gap-2"><Icon name="Send" size={15} /> Telegram</li>
               <li className="flex items-center gap-2"><Icon name="MessageCircle" size={15} /> Сообщество ВК</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-white/8 mt-10 pt-6 flex flex-col sm:flex-row justify-between gap-4 text-xs text-white/40">
-          <span>© 2026 BotVK. Все права защищены.</span>
+          <span>© 2026 BotVK. ИНН 110105729752. Все права защищены.</span>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-white transition-colors">Политика конфиденциальности</a>
-            <a href="#" className="hover:text-white transition-colors">Оферта</a>
+            <Link to="/privacy" className="hover:text-white transition-colors">Политика конфиденциальности</Link>
+            <Link to="/terms" className="hover:text-white transition-colors">Оферта</Link>
           </div>
         </div>
       </div>

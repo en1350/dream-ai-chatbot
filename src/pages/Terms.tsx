@@ -43,7 +43,8 @@ const Terms = () => {
           </section>
           <section>
             <h2 className="text-white font-semibold mb-2">7. Контакты</h2>
-            <p>По всем вопросам обращайтесь в центр поддержки сервиса.</p>
+            <p>По всем вопросам обращайтесь в центр поддержки сервиса или пишите на почту <a href="mailto:bot-flow@bot-flow.ru" className="text-aqua hover:underline">bot-flow@bot-flow.ru</a>.</p>
+            <p className="mt-2 text-white/50">ИНН 110105729752</p>
           </section>
         </div>
       </div>

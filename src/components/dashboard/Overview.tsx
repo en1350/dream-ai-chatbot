@@ -3,21 +3,6 @@ import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import func2url from "../../../backend/func2url.json";
 
-const kpis = [
-  { label: "Активных ботов", value: "4", delta: "+1", icon: "Bot", up: true },
-  { label: "Диалогов за 7 дней", value: "1 284", delta: "+18%", icon: "MessageCircle", up: true },
-  { label: "Собрано лидов", value: "213", delta: "+12%", icon: "Inbox", up: true },
-  { label: "Конверсия в заявку", value: "16.6%", delta: "−2%", icon: "Target", up: false },
-];
-
-const chart = [42, 55, 38, 61, 70, 48, 82, 65, 90, 74, 88, 96];
-
-const limits = [
-  { label: "Диалоги", cur: 640, max: 1000, color: "from-electric to-aqua" },
-  { label: "AI-запросы", cur: 870, max: 1000, color: "from-amber-400 to-orange-500" },
-  { label: "Боты", cur: 4, max: 5, color: "from-aqua to-electric" },
-];
-
 interface RealBot {
   id: number;
   name: string;
@@ -25,19 +10,32 @@ interface RealBot {
   status: string;
 }
 
-const events = [
-  { icon: "UserPlus", text: "Новый лид +7 (923) •••-45-12", time: "2 мин", color: "text-aqua" },
-  { icon: "MessageCircle", text: "Бот «Локон» ответил 12 раз", time: "18 мин", color: "text-electric" },
-  { icon: "TriangleAlert", text: "Токен ВК «Bloom» истекает через 3 дня", time: "1 ч", color: "text-amber-400" },
-  { icon: "TrendingUp", text: "Конверсия выросла на 4%", time: "3 ч", color: "text-aqua" },
-];
+interface RealEvent {
+  id: number;
+  type: string;
+  text: string;
+  icon: string;
+  color: string;
+  createdAt: string | null;
+}
 
 const checklist = [
-  { text: "Создать первого бота", done: true },
-  { text: "Подключить сообщество ВК", done: true },
-  { text: "Собрать первый лид", done: true },
+  { text: "Создать первого бота", done: false },
+  { text: "Подключить сообщество ВК", done: false },
+  { text: "Собрать первый лид", done: false },
   { text: "Настроить уведомления", done: false },
 ];
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return "";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return "только что";
+  if (min < 60) return `${min} мин`;
+  const hrs = Math.floor(min / 60);
+  if (hrs < 24) return `${hrs} ч`;
+  return `${Math.floor(hrs / 24)} дн`;
+}
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -46,24 +44,49 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 }
 
 export default function Overview() {
-  const doneCount = checklist.filter((c) => c.done).length;
   const navigate = useNavigate();
   const [bots, setBots] = useState<RealBot[]>([]);
   const [botsLoading, setBotsLoading] = useState(true);
+  const [events, setEvents] = useState<RealEvent[]>([]);
+  const [eventsTotal, setEventsTotal] = useState(0);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
   useEffect(() => {
     fetch(func2url["bots"])
       .then((res) => res.json())
       .then((data) => setBots(data.bots || []))
       .finally(() => setBotsLoading(false));
+
+    fetch(`${func2url["events"]}?limit=8`)
+      .then((res) => res.json())
+      .then((data) => {
+        setEvents(data.events || []);
+        setEventsTotal(data.total || 0);
+      })
+      .finally(() => setEventsLoading(false));
   }, []);
+
+  const doneCount = checklist.filter((c) => c.done).length;
+
+  const kpis = [
+    { label: "Активных ботов", value: String(bots.filter((b) => b.status === "active").length), icon: "Bot" },
+    { label: "Диалогов за 7 дней", value: "0", icon: "MessageCircle" },
+    { label: "Собрано лидов", value: "0", icon: "Inbox" },
+    { label: "Конверсия в заявку", value: "0%", icon: "Target" },
+  ];
+
+  const limits = [
+    { label: "Диалоги", cur: 0, max: 1000, color: "from-electric to-aqua" },
+    { label: "AI-запросы", cur: 0, max: 1000, color: "from-amber-400 to-orange-500" },
+    { label: "Боты", cur: bots.length, max: 5, color: "from-aqua to-electric" },
+  ];
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-display text-3xl text-white">Обзор аккаунта</h1>
-          <p className="text-white/50 text-sm mt-1">Добро пожаловать, Алексей 👋</p>
+          <p className="text-white/50 text-sm mt-1">Добро пожаловать 👋</p>
         </div>
         <button
           onClick={() => navigate("/builder/new")}
@@ -81,9 +104,6 @@ export default function Overview() {
               <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                 <Icon name={k.icon} size={18} className="text-aqua" />
               </div>
-              <span className={`text-xs font-medium px-2 py-1 rounded-full ${k.up ? "text-aqua bg-aqua/10" : "text-amber-400 bg-amber-400/10"}`}>
-                {k.delta}
-              </span>
             </div>
             <div className="font-display text-3xl text-white">{k.value}</div>
             <div className="text-xs text-white/50 mt-1">{k.label}</div>
@@ -108,15 +128,8 @@ export default function Overview() {
               ))}
             </div>
           </div>
-          <div className="flex items-end gap-2 h-44">
-            {chart.map((v, i) => (
-              <div key={i} className="flex-1 group relative">
-                <div
-                  className="w-full rounded-t-md bg-gradient-to-t from-electric/40 to-aqua group-hover:from-electric group-hover:to-aqua transition-all"
-                  style={{ height: `${v}%` }}
-                />
-              </div>
-            ))}
+          <div className="flex items-center justify-center h-44 text-white/25 text-sm">
+            Пока нет данных об активности
           </div>
         </Card>
 
@@ -126,7 +139,7 @@ export default function Overview() {
           <p className="text-xs text-white/40 mb-5">План «Бизнес»</p>
           <div className="space-y-5">
             {limits.map((l) => {
-              const pct = Math.round((l.cur / l.max) * 100);
+              const pct = l.max > 0 ? Math.round((l.cur / l.max) * 100) : 0;
               return (
                 <div key={l.label}>
                   <div className="flex justify-between text-sm mb-1.5">
@@ -212,18 +225,38 @@ export default function Overview() {
 
         {/* Events feed */}
         <Card className="lg:col-span-3">
-          <h3 className="text-white font-semibold mb-5">Последние события</h3>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {events.map((e, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03]">
-                <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                  <Icon name={e.icon} size={16} className={e.color} />
-                </div>
-                <span className="text-white/80 text-sm flex-1">{e.text}</span>
-                <span className="text-white/30 text-xs shrink-0">{e.time}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-white font-semibold">Последние события</h3>
+            <span className="flex items-center gap-1.5 text-xs text-aqua bg-aqua/10 px-2.5 py-1 rounded-full">
+              <Icon name="Bell" size={12} /> {eventsTotal}
+            </span>
           </div>
+
+          {eventsLoading && (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-[52px] rounded-xl bg-white/5 animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {!eventsLoading && events.length === 0 && (
+            <div className="text-center py-6 text-white/40 text-sm">Пока нет событий</div>
+          )}
+
+          {!eventsLoading && events.length > 0 && (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {events.map((e) => (
+                <div key={e.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03]">
+                  <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                    <Icon name={e.icon} size={16} className={e.color} />
+                  </div>
+                  <span className="text-white/80 text-sm flex-1">{e.text}</span>
+                  <span className="text-white/30 text-xs shrink-0">{timeAgo(e.createdAt)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
     </div>

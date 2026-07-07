@@ -1,10 +1,10 @@
 import { useState } from "react";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Overview from "@/components/dashboard/Overview";
+import BotsList from "@/components/dashboard/BotsList";
 import Icon from "@/components/ui/icon";
 
 const stubs: Record<string, { title: string; icon: string; text: string }> = {
-  bots: { title: "Мои боты", icon: "Bot", text: "Список ваших ботов и переход в конструктор" },
   leads: { title: "Заявки", icon: "Inbox", text: "База собранных телефонов и email" },
   landings: { title: "Лендинги", icon: "LayoutTemplate", text: "Конструктор посадочных страниц" },
   integrations: { title: "Интеграции", icon: "Plug", text: "ВКонтакте, CRM и вебхуки" },
@@ -25,6 +25,8 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-6 md:px-10 py-8">
           {active === "overview" ? (
             <Overview />
+          ) : active === "bots" ? (
+            <BotsList />
           ) : (
             <div className="flex flex-col items-center justify-center text-center py-32">
               <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-5">

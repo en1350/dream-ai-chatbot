@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 const links = [
@@ -25,15 +26,15 @@ export default function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-3">
-          <a href="#auth" className="hidden sm:block text-sm text-white/70 hover:text-white transition-colors">
+          <Link to="/dashboard" className="hidden sm:block text-sm text-white/70 hover:text-white transition-colors">
             Войти
-          </a>
-          <a
-            href="#auth"
+          </Link>
+          <Link
+            to="/dashboard"
             className="text-sm font-medium px-5 py-2 rounded-full bg-white text-ink hover:bg-aqua transition-colors"
           >
             Начать бесплатно
-          </a>
+          </Link>
         </div>
       </div>
     </header>

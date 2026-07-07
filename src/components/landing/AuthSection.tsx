@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 export default function AuthSection() {
   const [mode, setMode] = useState<"register" | "login">("register");
+  const navigate = useNavigate();
   return (
     <section id="auth" className="py-28 relative overflow-hidden">
       <div className="absolute inset-0 grain-bg" />
@@ -60,7 +62,10 @@ export default function AuthSection() {
                 className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
               />
             </div>
-            <button className="w-full h-12 rounded-xl bg-gradient-to-r from-electric to-aqua text-ink font-semibold hover:shadow-[0_0_30px_rgba(43,127,255,0.5)] transition-all flex items-center justify-center gap-2">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-electric to-aqua text-ink font-semibold hover:shadow-[0_0_30px_rgba(43,127,255,0.5)] transition-all flex items-center justify-center gap-2"
+            >
               {mode === "register" ? "Зарегистрироваться" : "Войти"}
               <Icon name="ArrowRight" size={18} />
             </button>

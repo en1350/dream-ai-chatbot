@@ -49,7 +49,7 @@ const PublicLanding = () => {
     );
   }
 
-  return <LandingRenderer blocks={blocks} theme={theme} vkGroupId={vkGroupId} />;
+  return <LandingRenderer blocks={blocks} theme={theme} vkGroupId={vkGroupId} slug={slug} />;
 };
 
 export default PublicLanding;

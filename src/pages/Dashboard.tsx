@@ -4,10 +4,10 @@ import Overview from "@/components/dashboard/Overview";
 import BotsList from "@/components/dashboard/BotsList";
 import LandingsList from "@/components/dashboard/LandingsList";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
+import LeadsList from "@/components/dashboard/LeadsList";
 import Icon from "@/components/ui/icon";
 
 const stubs: Record<string, { title: string; icon: string; text: string }> = {
-  leads: { title: "Заявки", icon: "Inbox", text: "База собранных телефонов и email" },
   analytics: { title: "Аналитика", icon: "BarChart3", text: "Воронки и статистика диалогов" },
   team: { title: "Команда", icon: "Users", text: "Участники и права доступа" },
   billing: { title: "Тарифы и биллинг", icon: "CreditCard", text: "Ваш план и история платежей" },
@@ -31,6 +31,8 @@ const Dashboard = () => {
             <LandingsList />
           ) : active === "integrations" ? (
             <IntegrationsPanel />
+          ) : active === "leads" ? (
+            <LeadsList />
           ) : (
             <div className="flex flex-col items-center justify-center text-center py-32">
               <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-5">

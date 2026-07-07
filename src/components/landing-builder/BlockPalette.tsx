@@ -50,6 +50,18 @@ const PRESETS: { icon: string; label: string; block: LandingBlock }[] = [
       subtitle: "Ответит бот, а по сложным вопросам подключится менеджер",
     },
   },
+  {
+    icon: "Mail",
+    label: "Форма — email",
+    block: {
+      type: "email-form",
+      title: "Оставьте заявку",
+      subtitle: "Укажите email — мы свяжемся с вами в ближайшее время",
+      ctaText: "Отправить",
+      formFields: [],
+      successText: "Спасибо! Заявка отправлена.",
+    },
+  },
 ];
 
 export default function BlockPalette({ onAddBlock }: Props) {

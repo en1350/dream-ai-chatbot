@@ -1,6 +1,7 @@
 import { ReactNode, Fragment } from "react";
 import Icon from "@/components/ui/icon";
 import { LandingBlock, LandingTheme } from "./types";
+import EmailFormBlock from "./EmailFormBlock";
 
 interface Props {
   blocks: LandingBlock[];
@@ -9,9 +10,10 @@ interface Props {
   editable?: boolean;
   selectedIndex?: number | null;
   onSelectBlock?: (i: number) => void;
+  slug?: string;
 }
 
-export default function LandingRenderer({ blocks, theme, vkGroupId, editable, selectedIndex, onSelectBlock }: Props) {
+export default function LandingRenderer({ blocks, theme, vkGroupId, editable, selectedIndex, onSelectBlock, slug }: Props) {
   const wrap = (i: number, node: ReactNode) => {
     if (!editable) return <Fragment key={i}>{node}</Fragment>;
     const isSelected = selectedIndex === i;
@@ -146,6 +148,10 @@ export default function LandingRenderer({ blocks, theme, vkGroupId, editable, se
               </div>
             </section>
           );
+        }
+
+        if (block.type === "email-form") {
+          return wrap(i, <EmailFormBlock block={block} theme={theme} editable={editable} slug={slug} />);
         }
 
         return null;

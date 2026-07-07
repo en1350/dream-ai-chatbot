@@ -16,6 +16,7 @@ const BLOCK_LABELS: Record<string, string> = {
   features: "Преимущества",
   cta: "Призыв к действию",
   vk: "Интеграция с ВКонтакте",
+  "email-form": "Форма — email",
 };
 
 export default function BlockInspector({ block, onUpdate, onDelete, onClose, bots, botId, onBotChange }: Props) {
@@ -35,7 +36,7 @@ export default function BlockInspector({ block, onUpdate, onDelete, onClose, bot
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {(block.type === "hero" || block.type === "cta" || block.type === "vk") && (
+        {(block.type === "hero" || block.type === "cta" || block.type === "vk" || block.type === "email-form") && (
           <>
             <div>
               <label className="text-xs text-white/50 mb-1.5 block">Заголовок</label>
@@ -161,6 +162,68 @@ export default function BlockInspector({ block, onUpdate, onDelete, onClose, bot
               Работает после подключения бота к сообществу ВКонтакте в разделе «Интеграции».
             </p>
           </div>
+        )}
+
+        {block.type === "email-form" && (
+          <>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Текст кнопки</label>
+              <input
+                value={block.ctaText || ""}
+                onChange={(e) => onUpdate({ ctaText: e.target.value })}
+                className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white focus:border-electric focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Дополнительные поля</label>
+              <div className="space-y-2">
+                {[
+                  { key: "name" as const, label: "Имя" },
+                  { key: "phone" as const, label: "Телефон" },
+                ].map((f) => {
+                  const checked = (block.formFields || []).includes(f.key);
+                  return (
+                    <label key={f.key} className="flex items-center gap-2.5 text-sm text-white/70 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const current = block.formFields || [];
+                          const next = e.target.checked
+                            ? [...current, f.key]
+                            : current.filter((k) => k !== f.key);
+                          onUpdate({ formFields: next });
+                        }}
+                        className="w-4 h-4 rounded accent-electric"
+                      />
+                      {f.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Текст после отправки</label>
+              <input
+                value={block.successText || ""}
+                onChange={(e) => onUpdate({ successText: e.target.value })}
+                placeholder="Спасибо! Мы свяжемся с вами."
+                className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+              />
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+              <div className="flex items-center gap-2 text-xs text-white/60 mb-1">
+                <Icon name="Info" size={13} className="text-aqua" />
+                Заявки попадают в раздел «Заявки»
+              </div>
+              <p className="text-xs text-white/45 leading-relaxed">
+                Email обязателен для отправки. После публикации лендинга форма начнёт собирать заявки в личный кабинет.
+              </p>
+            </div>
+          </>
         )}
 
         <div className="pt-2 border-t border-white/8">

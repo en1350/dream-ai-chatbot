@@ -1,5 +1,5 @@
 export interface LandingBlock {
-  type: "hero" | "features" | "cta" | "vk";
+  type: "hero" | "features" | "cta" | "vk" | "email-form";
   title?: string;
   subtitle?: string;
   ctaText?: string;
@@ -7,6 +7,8 @@ export interface LandingBlock {
   image?: string;
   features?: { icon: string; title: string; text: string }[];
   vkGroupUrl?: string;
+  formFields?: ("name" | "phone")[];
+  successText?: string;
 }
 
 export interface LandingTheme {

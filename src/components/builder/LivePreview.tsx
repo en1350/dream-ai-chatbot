@@ -22,8 +22,8 @@ interface Msg {
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-function findStart(nodes: BotNode[]): BotNode | undefined {
-  return nodes.find((n) => n.subtype === "start") || nodes[0];
+function findStart(nodes: BotNode[]): BotNode | null {
+  return nodes.find((n) => n.subtype === "start") ?? null;
 }
 
 export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose, onReset }: Props) {

@@ -20,10 +20,12 @@ export interface BotNode {
   buttons: string[];
   x: number;
   y: number;
+  successText?: string;
 }
 
 export interface BotEdge {
   id: string;
   source: string;
   target: string;
+  label?: string;
 }

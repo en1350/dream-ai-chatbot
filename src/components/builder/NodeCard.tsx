@@ -1,6 +1,7 @@
 import Icon from "@/components/ui/icon";
 import { BotNode } from "./types";
 import { NODE_DEF_MAP, CATEGORY_META } from "./nodeDefs";
+import { NODE_WIDTH, portOffsetX } from "./portUtils";
 
 interface Props {
   node: BotNode;
@@ -8,7 +9,7 @@ interface Props {
   connecting: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
   onSelect: () => void;
-  onStartConnect: (e: React.MouseEvent) => void;
+  onStartConnect: (label: string | undefined, e: React.MouseEvent) => void;
   onFinishConnect: () => void;
   onDelete: () => void;
 }
@@ -25,11 +26,12 @@ export default function NodeCard({
 }: Props) {
   const def = NODE_DEF_MAP[node.subtype];
   const meta = CATEGORY_META[node.category];
+  const ports: (string | undefined)[] = node.buttons.length > 0 ? node.buttons : [undefined];
 
   return (
     <div
       className="absolute select-none"
-      style={{ left: node.x, top: node.y, width: 232 }}
+      style={{ left: node.x, top: node.y, width: NODE_WIDTH }}
       onPointerDown={onPointerDown}
       onClick={onSelect}
     >
@@ -77,13 +79,16 @@ export default function NodeCard({
           )}
         </div>
 
-        {/* bottom port */}
-        <div
-          onMouseDown={(e) => { e.stopPropagation(); onStartConnect(e); }}
-          title="Тяните, чтобы соединить с другим блоком"
-          className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 border-ink2 cursor-crosshair hover:scale-125 transition-transform z-10"
-          style={{ background: meta.color }}
-        />
+        {/* bottom port(s) — один на каждую кнопку, или один общий */}
+        {ports.map((label, i) => (
+          <div
+            key={i}
+            onMouseDown={(e) => { e.stopPropagation(); onStartConnect(label, e); }}
+            title={label ? `Тяните, чтобы соединить ветку «${label}»` : "Тяните, чтобы соединить с другим блоком"}
+            className="absolute -bottom-[7px] w-3.5 h-3.5 rounded-full border-2 border-ink2 cursor-crosshair hover:scale-125 transition-transform z-10"
+            style={{ background: meta.color, left: portOffsetX(node, label), transform: "translateX(-50%)" }}
+          />
+        ))}
       </div>
     </div>
   );

@@ -1,10 +1,12 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
-import { BotNode } from "./types";
+import { BotNode, BotEdge } from "./types";
 import func2url from "../../../backend/func2url.json";
 
 interface Props {
   nodes: BotNode[];
+  edges: BotEdge[];
+  botId: number | null;
   activeNodeId: string | null;
   onClose: () => void;
   onReset: () => void;
@@ -16,30 +18,112 @@ interface Msg {
   buttons?: string[];
 }
 
-export default function LivePreview({ nodes, activeNodeId, onClose, onReset }: Props) {
-  const [messages, setMessages] = useState<Msg[]>(() => {
-    const start = nodes.find((n) => n.subtype === "start") || nodes[0];
-    return start ? [{ from: "bot", text: start.text || start.title, buttons: start.buttons }] : [];
-  });
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+function findStart(nodes: BotNode[]): BotNode | undefined {
+  return nodes.find((n) => n.subtype === "start") || nodes[0];
+}
+
+export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose, onReset }: Props) {
+  const start = findStart(nodes);
+  const [messages, setMessages] = useState<Msg[]>(() =>
+    start ? [{ from: "bot", text: start.text || start.title, buttons: start.buttons }] : []
+  );
+  const [currentId, setCurrentId] = useState<string | null>(start?.id ?? null);
+  const [awaitingEmail, setAwaitingEmail] = useState(() => start?.subtype === "email-collect");
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
 
   const active = nodes.find((n) => n.id === activeNodeId);
   const aiNode = nodes.find((n) => n.category === "ai");
 
+  const pushBot = (text: string, buttons?: string[]) => {
+    setMessages((m) => [...m, { from: "bot", text, buttons }]);
+  };
+
+  const enterNode = async (node: BotNode) => {
+    setCurrentId(node.id);
+
+    if (node.subtype === "gpt") {
+      setThinking(true);
+      try {
+        const res = await fetch(func2url["ai-chat"], {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: node.text || "Ты дружелюбный ассистент чат-бота. Отвечай кратко.",
+            history: messages,
+          }),
+        });
+        const data = await res.json();
+        pushBot(res.ok ? data.reply : `⚠ ${data.error || "AI недоступен"}`);
+      } catch {
+        pushBot("⚠ Не удалось связаться с AI");
+      } finally {
+        setThinking(false);
+      }
+      return;
+    }
+
+    pushBot(node.text || node.title, node.buttons);
+    setAwaitingEmail(node.subtype === "email-collect");
+  };
+
+  const advance = (label?: string) => {
+    const edge = edges.find((e) => e.source === currentId && (e.label || "") === (label || ""));
+    if (!edge) return false;
+    const next = nodes.find((n) => n.id === edge.target);
+    if (!next) return false;
+    enterNode(next);
+    return true;
+  };
+
+  const submitEmail = async (email: string) => {
+    const node = nodes.find((n) => n.id === currentId);
+    if (!EMAIL_RE.test(email)) {
+      pushBot("Похоже, это не похоже на email. Попробуйте ещё раз, например: name@mail.ru");
+      return;
+    }
+    setThinking(true);
+    try {
+      const res = await fetch(func2url["leads-public"], {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ botId, email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        pushBot(`⚠ ${data.error || "Не удалось сохранить заявку"}`);
+        return;
+      }
+      pushBot(node?.successText || "Спасибо! Заявка сохранена.");
+      setAwaitingEmail(false);
+      if (!advance()) {
+        // ветки дальше нет — диалог на этом завершается
+      }
+    } catch {
+      pushBot("⚠ Не удалось сохранить заявку, попробуйте позже");
+    } finally {
+      setThinking(false);
+    }
+  };
+
   const send = async (text: string) => {
     if (!text.trim() || thinking) return;
-    const nextHistory = [...messages, { from: "user" as const, text }];
-    setMessages(nextHistory);
+    setMessages((m) => [...m, { from: "user", text }]);
     setInput("");
+
+    if (awaitingEmail) {
+      submitEmail(text.trim());
+      return;
+    }
+
+    if (advance(text)) return;
 
     if (!aiNode) {
       setTimeout(() => {
         const reply = nodes[Math.floor(Math.random() * nodes.length)];
-        setMessages((m) => [
-          ...m,
-          { from: "bot", text: reply?.text || "Хорошо, продолжаем!", buttons: reply?.buttons },
-        ]);
+        pushBot(reply?.text || "Хорошо, продолжаем!", reply?.buttons);
       }, 500);
       return;
     }
@@ -51,16 +135,13 @@ export default function LivePreview({ nodes, activeNodeId, onClose, onReset }: P
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: aiNode.text || "Ты дружелюбный ассистент чат-бота. Отвечай кратко.",
-          history: nextHistory,
+          history: [...messages, { from: "user", text }],
         }),
       });
       const data = await res.json();
-      setMessages((m) => [
-        ...m,
-        { from: "bot", text: res.ok ? data.reply : `⚠ ${data.error || "AI недоступен"}` },
-      ]);
+      pushBot(res.ok ? data.reply : `⚠ ${data.error || "AI недоступен"}`);
     } catch {
-      setMessages((m) => [...m, { from: "bot", text: "⚠ Не удалось связаться с AI" }]);
+      pushBot("⚠ Не удалось связаться с AI");
     } finally {
       setThinking(false);
     }
@@ -68,8 +149,10 @@ export default function LivePreview({ nodes, activeNodeId, onClose, onReset }: P
 
   const reset = () => {
     onReset();
-    const start = nodes.find((n) => n.subtype === "start") || nodes[0];
-    setMessages(start ? [{ from: "bot", text: start.text || start.title, buttons: start.buttons }] : []);
+    const s = findStart(nodes);
+    setCurrentId(s?.id ?? null);
+    setAwaitingEmail(s?.subtype === "email-collect");
+    setMessages(s ? [{ from: "bot", text: s.text || s.title, buttons: s.buttons }] : []);
   };
 
   return (
@@ -102,7 +185,14 @@ export default function LivePreview({ nodes, activeNodeId, onClose, onReset }: P
       {aiNode && (
         <div className="mx-4 mt-3 flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-[#FF5C8A]/10 border border-[#FF5C8A]/25 text-[#FF5C8A]">
           <Icon name="Sparkles" size={13} />
-          AI-режим активен: отвечает GPT-4o-mini
+          AI-режим доступен как запасной сценарий, если у блока нет связи
+        </div>
+      )}
+
+      {awaitingEmail && (
+        <div className="mx-4 mt-3 flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-aqua/10 border border-aqua/25 text-aqua">
+          <Icon name="Mail" size={13} />
+          Бот ждёт email — введите его в поле снизу
         </div>
       )}
 
@@ -122,7 +212,7 @@ export default function LivePreview({ nodes, activeNodeId, onClose, onReset }: P
             >
               {m.text}
             </div>
-            {m.from === "bot" && m.buttons && m.buttons.length > 0 && (
+            {m.from === "bot" && m.buttons && m.buttons.length > 0 && i === messages.length - 1 && (
               <div className="flex flex-wrap gap-1.5 mt-2 max-w-[85%]">
                 {m.buttons.map((b, bi) => (
                   <button
@@ -154,7 +244,8 @@ export default function LivePreview({ nodes, activeNodeId, onClose, onReset }: P
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send(input)}
           disabled={thinking}
-          placeholder={thinking ? "AI печатает…" : "Написать боту…"}
+          placeholder={thinking ? "AI печатает…" : awaitingEmail ? "Введите email…" : "Написать боту…"}
+          type={awaitingEmail ? "email" : "text"}
           className="flex-1 h-10 rounded-full bg-white/5 border border-white/10 px-4 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors disabled:opacity-50"
         />
         <button

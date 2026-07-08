@@ -69,14 +69,15 @@ def handler(event: dict, context) -> dict:
                     "y": r[5] or 100,
                     "buttons": extra.get("buttons", []),
                     "category": extra.get("category", "message"),
+                    "successText": extra.get("successText", ""),
                 })
 
             cur.execute(
-                f"""SELECT edge_id, source_node_id, target_node_id
+                f"""SELECT edge_id, source_node_id, target_node_id, label
                     FROM {SCHEMA}.bot_edges WHERE bot_id = {int(bot_id)}"""
             )
             edge_rows = cur.fetchall()
-            edges = [{"id": r[0], "source": r[1], "target": r[2]} for r in edge_rows]
+            edges = [{"id": r[0], "source": r[1], "target": r[2], "label": r[3]} for r in edge_rows]
 
             bot = {
                 "id": bot_row[0], "name": bot_row[1], "description": bot_row[2] or "",
@@ -108,7 +109,11 @@ def handler(event: dict, context) -> dict:
             cur.execute(f"DELETE FROM {SCHEMA}.bot_nodes WHERE bot_id = {bot_id}")
 
             for n in nodes:
-                extra = json.dumps({"buttons": n.get("buttons", []), "category": n.get("category", "message")})
+                extra = json.dumps({
+                    "buttons": n.get("buttons", []),
+                    "category": n.get("category", "message"),
+                    "successText": n.get("successText", ""),
+                })
                 cur.execute(
                     f"""INSERT INTO {SCHEMA}.bot_nodes (bot_id, node_id, type, label, message, pos_x, pos_y, extra)
                         VALUES ({bot_id}, '{escape(n.get("id", ""))}', '{escape(n.get("subtype", "text"))}',
@@ -118,9 +123,11 @@ def handler(event: dict, context) -> dict:
 
             for e in edges:
                 edge_id = e.get("id") or f"{e.get('source')}-{e.get('target')}"
+                edge_label = e.get("label")
+                label_sql = f"'{escape(edge_label)}'" if edge_label else "NULL"
                 cur.execute(
-                    f"""INSERT INTO {SCHEMA}.bot_edges (bot_id, edge_id, source_node_id, target_node_id)
-                        VALUES ({bot_id}, '{escape(edge_id)}', '{escape(e.get("source", ""))}', '{escape(e.get("target", ""))}')"""
+                    f"""INSERT INTO {SCHEMA}.bot_edges (bot_id, edge_id, source_node_id, target_node_id, label)
+                        VALUES ({bot_id}, '{escape(edge_id)}', '{escape(e.get("source", ""))}', '{escape(e.get("target", ""))}', {label_sql})"""
                 )
 
             conn.commit()

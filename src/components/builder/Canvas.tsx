@@ -3,6 +3,7 @@ import Icon from "@/components/ui/icon";
 import NodeCard from "./NodeCard";
 import { BotNode, BotEdge } from "./types";
 import { CATEGORY_META } from "./nodeDefs";
+import { NODE_WIDTH, portOffsetX } from "./portUtils";
 
 interface Props {
   nodes: BotNode[];
@@ -10,7 +11,7 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
-  onConnect: (source: string, target: string) => void;
+  onConnect: (source: string, target: string, label?: string) => void;
   onDelete: (id: string) => void;
   onDrop: (subtype: string, x: number, y: number) => void;
 }
@@ -21,7 +22,7 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState<{ id: string; offX: number; offY: number } | null>(null);
   const [panning, setPanning] = useState<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
-  const [connectFrom, setConnectFrom] = useState<string | null>(null);
+  const [connectFrom, setConnectFrom] = useState<{ id: string; label?: string } | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
 
   const toWorld = useCallback(
@@ -107,26 +108,37 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             const s = nodes.find((n) => n.id === edge.source);
             const t = nodes.find((n) => n.id === edge.target);
             if (!s || !t) return null;
-            const sx = s.x + 116, sy = s.y + 88;
-            const tx = t.x + 116, ty = t.y;
+            const sx = s.x + portOffsetX(s, edge.label), sy = s.y + 88;
+            const tx = t.x + NODE_WIDTH / 2, ty = t.y;
+            const midX = (sx + tx) / 2, midY = (sy + ty) / 2;
             return (
-              <path
-                key={edge.id}
-                d={edgePath(sx, sy, tx, ty)}
-                stroke="#2B7FFF"
-                strokeWidth={2}
-                fill="none"
-                markerEnd="url(#arrow)"
-                opacity={0.7}
-              />
+              <g key={edge.id}>
+                <path
+                  d={edgePath(sx, sy, tx, ty)}
+                  stroke="#2B7FFF"
+                  strokeWidth={2}
+                  fill="none"
+                  markerEnd="url(#arrow)"
+                  opacity={0.7}
+                />
+                {edge.label && (
+                  <foreignObject x={midX - 50} y={midY - 11} width={100} height={22} style={{ overflow: "visible" }}>
+                    <div className="flex justify-center pointer-events-none">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-ink2 border border-electric/30 text-electric/90 whitespace-nowrap">
+                        {edge.label}
+                      </span>
+                    </div>
+                  </foreignObject>
+                )}
+              </g>
             );
           })}
           {connectFrom && (() => {
-            const s = nodes.find((n) => n.id === connectFrom);
+            const s = nodes.find((n) => n.id === connectFrom.id);
             if (!s) return null;
             return (
               <path
-                d={edgePath(s.x + 116, s.y + 88, mouse.x, mouse.y)}
+                d={edgePath(s.x + portOffsetX(s, connectFrom.label), s.y + 88, mouse.x, mouse.y)}
                 stroke="#18E0C8"
                 strokeWidth={2}
                 strokeDasharray="5 5"
@@ -141,17 +153,17 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             key={n.id}
             node={n}
             selected={selectedId === n.id}
-            connecting={!!connectFrom && connectFrom !== n.id}
+            connecting={!!connectFrom && connectFrom.id !== n.id}
             onSelect={() => onSelect(n.id)}
             onPointerDown={(e) => {
               e.stopPropagation();
               const p = toWorld(e.clientX, e.clientY);
               setDragging({ id: n.id, offX: p.x - n.x, offY: p.y - n.y });
             }}
-            onStartConnect={() => setConnectFrom(n.id)}
+            onStartConnect={(label) => setConnectFrom({ id: n.id, label })}
             onFinishConnect={() => {
-              if (connectFrom && connectFrom !== n.id) {
-                onConnect(connectFrom, n.id);
+              if (connectFrom && connectFrom.id !== n.id) {
+                onConnect(connectFrom.id, n.id, connectFrom.label);
               }
               setConnectFrom(null);
             }}

@@ -15,6 +15,7 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
   const meta = CATEGORY_META[node.category];
   const [newBtn, setNewBtn] = useState("");
   const supportsButtons = node.subtype === "text" || node.subtype === "buttons";
+  const isEmailCollect = node.subtype === "email-collect";
 
   return (
     <aside className="w-80 shrink-0 h-full border-l border-white/8 bg-ink2/60 backdrop-blur-xl flex flex-col">
@@ -95,7 +96,36 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
                 <Icon name="Plus" size={15} />
               </button>
             </div>
+            {node.buttons.length > 0 && (
+              <p className="text-[11px] text-white/35 mt-2 leading-relaxed">
+                У каждой кнопки на холсте своя точка снизу блока — соедините её со следующим шагом, чтобы диалог шёл в нужную ветку.
+              </p>
+            )}
           </div>
+        )}
+
+        {isEmailCollect && (
+          <>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Текст после отправки</label>
+              <input
+                value={node.successText || ""}
+                onChange={(e) => onUpdate({ successText: e.target.value })}
+                placeholder="Спасибо! Мы свяжемся с вами."
+                className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+              />
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+              <div className="flex items-center gap-2 text-xs text-white/60 mb-1">
+                <Icon name="Info" size={13} className="text-aqua" />
+                Как это работает
+              </div>
+              <p className="text-xs text-white/45 leading-relaxed">
+                Бот попросит пользователя ввести email прямо в диалоге, проверит формат и сохранит заявку
+                в раздел «Заявки» личного кабинета.
+              </p>
+            </div>
+          </>
         )}
 
         {node.category === "ai" && (

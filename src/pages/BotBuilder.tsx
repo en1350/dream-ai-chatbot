@@ -79,9 +79,10 @@ const BotBuilder = () => {
             buttons: n.buttons || [],
             x: n.x,
             y: n.y,
+            successText: n.successText || "",
           }))
         );
-        setEdges(data.edges.map((e: any) => ({ id: e.id, source: e.source, target: e.target })));
+        setEdges(data.edges.map((e: any) => ({ id: e.id, source: e.source, target: e.target, label: e.label })));
       })
       .catch(() => setLoadError("Не удалось загрузить сценарий"))
       .finally(() => setLoading(false));
@@ -168,10 +169,10 @@ const BotBuilder = () => {
     setSelectedId((s) => (s === id ? null : s));
   };
 
-  const connectNodes = (source: string, target: string) => {
+  const connectNodes = (source: string, target: string, label?: string) => {
     setEdges((es) => {
-      if (es.some((e) => e.source === source && e.target === target)) return es;
-      return [...es, { id: `e${Date.now()}`, source, target }];
+      if (es.some((e) => e.source === source && e.target === target && (e.label || "") === (label || ""))) return es;
+      return [...es, { id: `e${Date.now()}`, source, target, label }];
     });
   };
 
@@ -263,6 +264,8 @@ const BotBuilder = () => {
         {previewOpen && !selected && (
           <LivePreview
             nodes={nodes}
+            edges={edges}
+            botId={realBotId}
             activeNodeId={null}
             onClose={() => setPreviewOpen(false)}
             onReset={() => {}}

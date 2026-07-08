@@ -14,6 +14,13 @@
       "expectedStatus": 400
     },
     {
+      "name": "Missing slug and botId returns 400",
+      "method": "POST",
+      "path": "/",
+      "body": {"email": "test@example.com"},
+      "expectedStatus": 400
+    },
+    {
       "name": "Invalid email returns 400",
       "method": "POST",
       "path": "/",

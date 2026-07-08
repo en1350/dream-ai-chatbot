@@ -26,6 +26,7 @@ export const NODE_DEFS: NodeDef[] = [
 
   { subtype: "save-var", category: "data", label: "Сохранить в переменную", icon: "Save", defaultTitle: "Спросить телефон", defaultText: "Оставьте номер телефона", fieldLabel: "Переменная", fieldPlaceholder: "$phone" },
   { subtype: "validate", category: "data", label: "Валидация", icon: "ShieldCheck", defaultTitle: "Проверка формата", defaultText: "email должен содержать @" },
+  { subtype: "email-collect", category: "data", label: "Собрать email", icon: "Mail", defaultTitle: "Оставьте email", defaultText: "Укажите вашу почту, чтобы мы могли с вами связаться" },
 
   { subtype: "gpt", category: "ai", label: "GPT-ответ", icon: "Sparkles", defaultTitle: "AI-ответ", defaultText: "Отвечай дружелюбно, как консультант салона" },
   { subtype: "intent", category: "ai", label: "AI-классификатор", icon: "Brain", defaultTitle: "Определить намерение", defaultText: "запись / цена / жалоба" },

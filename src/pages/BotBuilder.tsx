@@ -36,6 +36,7 @@ const BotBuilder = () => {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRun = useRef(true);
   const editTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAddedId = useRef<string | null>(null);
 
   const pushHistory = useCallback(() => {
     setHistory((h) => [...h.slice(-19), { nodes, edges }]);
@@ -117,6 +118,7 @@ const BotBuilder = () => {
           }))
         );
         setEdges(data.edges.map((e: any) => ({ id: e.id, source: e.source, target: e.target, label: e.label })));
+        lastAddedId.current = null;
       })
       .catch(() => setLoadError("Не удалось загрузить сценарий"))
       .finally(() => setLoading(false));
@@ -179,6 +181,7 @@ const BotBuilder = () => {
     setNodes([]);
     setEdges([]);
     setSelectedId(null);
+    lastAddedId.current = null;
   }, [pushHistory]);
 
   const addNode = useCallback((subtype: string, x?: number, y?: number) => {
@@ -186,21 +189,40 @@ const BotBuilder = () => {
     if (!def) return;
     pushHistory();
     const id = uid();
-    setNodes((ns) => [
-      ...ns,
-      {
-        id,
-        subtype,
-        category: def.category,
-        title: def.defaultTitle,
-        text: def.defaultText || "",
-        buttons: [],
-        responseType: subtype === "list" ? "list" : subtype === "buttons" ? "buttons" : "none",
-        collectEmail: subtype === "email-collect",
-        x: x ?? 420 + Math.random() * 120,
-        y: y ?? 100 + ns.length * 40,
-      },
-    ]);
+    // Блок добавлен вручную кликом (без явных координат) — продолжаем цепочку от последнего
+    // добавленного блока (2→3→4…), а не привязываемся к первому блоку на холсте.
+    const isChained = x === undefined && y === undefined;
+    const prevId = isChained ? lastAddedId.current : null;
+
+    setNodes((ns) => {
+      const prevNode = prevId ? ns.find((n) => n.id === prevId) : undefined;
+      const defaultX = prevNode ? prevNode.x : 420 + Math.random() * 120;
+      const defaultY = prevNode ? prevNode.y + 160 : 100 + ns.length * 40;
+      return [
+        ...ns,
+        {
+          id,
+          subtype,
+          category: def.category,
+          title: def.defaultTitle,
+          text: def.defaultText || "",
+          buttons: [],
+          responseType: subtype === "list" ? "list" : subtype === "buttons" ? "buttons" : "none",
+          collectEmail: subtype === "email-collect",
+          x: x ?? defaultX,
+          y: y ?? defaultY,
+        },
+      ];
+    });
+
+    if (prevId) {
+      setEdges((es) => {
+        if (es.some((e) => e.source === prevId && e.target === id)) return es;
+        return [...es, { id: `e${Date.now()}`, source: prevId, target: id }];
+      });
+    }
+
+    lastAddedId.current = id;
     setSelectedId(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pushHistory]);
@@ -219,6 +241,7 @@ const BotBuilder = () => {
     setNodes((ns) => ns.filter((n) => n.id !== id));
     setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
     setSelectedId((s) => (s === id ? null : s));
+    if (lastAddedId.current === id) lastAddedId.current = null;
   };
 
   const connectNodes = (source: string, target: string, label?: string) => {
@@ -256,6 +279,7 @@ const BotBuilder = () => {
     setNodes(newNodes);
     setEdges(newEdges);
     setSelectedId(null);
+    lastAddedId.current = newNodes.length > 0 ? newNodes[newNodes.length - 1].id : null;
   };
 
   const selected = nodes.find((n) => n.id === selectedId) || null;

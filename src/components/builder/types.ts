@@ -20,6 +20,9 @@ export interface BotNode {
   buttons: string[];
   responseType?: "none" | "buttons" | "list";
   collectEmail?: boolean;
+  linkUrl?: string;
+  imageUrl?: string;
+  videoUrl?: string;
   x: number;
   y: number;
   successText?: string;

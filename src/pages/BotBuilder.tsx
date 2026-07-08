@@ -112,6 +112,9 @@ const BotBuilder = () => {
             buttons: n.buttons || [],
             responseType: n.responseType,
             collectEmail: n.collectEmail,
+            linkUrl: n.linkUrl || "",
+            imageUrl: n.imageUrl || "",
+            videoUrl: n.videoUrl || "",
             x: n.x,
             y: n.y,
             successText: n.successText || "",
@@ -252,6 +255,11 @@ const BotBuilder = () => {
     });
   };
 
+  const deleteEdge = (id: string) => {
+    pushHistory();
+    setEdges((es) => es.filter((e) => e.id !== id));
+  };
+
   const applyAiScenario = (data: {
     nodes: { id: string; subtype: string; category: string; title: string; text: string }[];
     edges: { source: string; target: string }[];
@@ -331,6 +339,7 @@ const BotBuilder = () => {
           onMove={moveNode}
           onConnect={connectNodes}
           onDelete={deleteNode}
+          onDeleteEdge={deleteEdge}
           onDrop={(subtype, x, y) => addNode(subtype, x, y)}
           onDragStart={pushHistory}
         />

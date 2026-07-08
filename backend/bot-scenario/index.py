@@ -72,6 +72,9 @@ def handler(event: dict, context) -> dict:
                     "successText": extra.get("successText", ""),
                     "responseType": extra.get("responseType"),
                     "collectEmail": extra.get("collectEmail", False),
+                    "linkUrl": extra.get("linkUrl", ""),
+                    "imageUrl": extra.get("imageUrl", ""),
+                    "videoUrl": extra.get("videoUrl", ""),
                 })
 
             cur.execute(
@@ -117,6 +120,9 @@ def handler(event: dict, context) -> dict:
                     "successText": n.get("successText", ""),
                     "responseType": n.get("responseType"),
                     "collectEmail": bool(n.get("collectEmail", False)),
+                    "linkUrl": n.get("linkUrl", ""),
+                    "imageUrl": n.get("imageUrl", ""),
+                    "videoUrl": n.get("videoUrl", ""),
                 })
                 cur.execute(
                     f"""INSERT INTO {SCHEMA}.bot_nodes (bot_id, node_id, type, label, message, pos_x, pos_y, extra)

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import { Switch } from "@/components/ui/switch";
+import MediaUploader from "@/components/shared/MediaUploader";
 import { BotNode } from "./types";
 import { NODE_DEF_MAP, CATEGORY_META } from "./nodeDefs";
 import { getResponseType, getCollectEmail } from "./nodeHelpers";
@@ -65,6 +66,36 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
             rows={4}
             className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors resize-none"
           />
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+          <div className="flex items-center gap-2 text-xs text-white/60">
+            <Icon name="Paperclip" size={13} className="text-aqua" />
+            Вложения блока
+          </div>
+          <MediaUploader
+            kind="image"
+            label="Картинка"
+            value={node.imageUrl || ""}
+            onChange={(url) => onUpdate({ imageUrl: url })}
+            folder="bot-nodes"
+          />
+          <MediaUploader
+            kind="video"
+            label="Видео"
+            value={node.videoUrl || ""}
+            onChange={(url) => onUpdate({ videoUrl: url })}
+            folder="bot-nodes"
+          />
+          <div>
+            <label className="text-xs text-white/50 mb-1.5 block">Ссылка на сайт</label>
+            <input
+              value={node.linkUrl || ""}
+              onChange={(e) => onUpdate({ linkUrl: e.target.value })}
+              placeholder="https://example.com"
+              className="w-full h-9 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+            />
+          </div>
         </div>
 
         <div>

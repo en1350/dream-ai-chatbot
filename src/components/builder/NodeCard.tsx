@@ -64,6 +64,11 @@ export default function NodeCard({
               <Icon name="Mail" size={11} className="text-aqua" />
             </div>
           )}
+          {node.linkUrl && (
+            <div title="Есть ссылка на сайт" className="w-5 h-5 shrink-0 rounded-md bg-electric/15 flex items-center justify-center">
+              <Icon name="Link" size={11} className="text-electric" />
+            </div>
+          )}
           {selected && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -75,7 +80,21 @@ export default function NodeCard({
         </div>
 
         <div className="px-3.5 py-2.5">
+          {node.imageUrl && (
+            <img src={node.imageUrl} alt="" className="w-full h-20 object-cover rounded-lg mb-2" />
+          )}
+          {node.videoUrl && !node.imageUrl && (
+            <div className="w-full h-20 rounded-lg mb-2 bg-white/5 border border-white/10 flex items-center justify-center">
+              <Icon name="Video" size={20} className="text-white/30" />
+            </div>
+          )}
           <p className="text-xs text-white/50 leading-relaxed line-clamp-2">{node.text || "—"}</p>
+          {node.linkUrl && (
+            <div className="flex items-center gap-1 mt-1.5 text-[10px] text-electric/80 truncate">
+              <Icon name="Link" size={10} className="shrink-0" />
+              <span className="truncate">{node.linkUrl}</span>
+            </div>
+          )}
           {node.buttons.length > 0 && isList && (
             <div className="flex flex-col gap-1 mt-2">
               {node.buttons.map((b, i) => (

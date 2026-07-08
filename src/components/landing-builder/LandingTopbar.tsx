@@ -38,6 +38,12 @@ export default function LandingTopbar({ name, onRename, slug, published, onToggl
   };
 
   const publicUrl = `${window.location.origin}/l/${slug}`;
+  const previewUrl = published ? publicUrl : `${publicUrl}?preview=1`;
+
+  const shareVk = () => {
+    const url = `https://vk.com/share.php?url=${encodeURIComponent(publicUrl)}&title=${encodeURIComponent(name)}`;
+    window.open(url, "_blank", "noopener,noreferrer,width=600,height=500");
+  };
 
   return (
     <header className="h-14 shrink-0 border-b border-white/8 bg-ink2/70 backdrop-blur-xl flex items-center px-4 gap-3">
@@ -107,6 +113,28 @@ export default function LandingTopbar({ name, onRename, slug, published, onToggl
           <Icon name="ExternalLink" size={13} className="shrink-0" />
           <span className="truncate">/l/{slug}</span>
         </a>
+      )}
+
+      <a
+        href={previewUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+        title="Открыть предпросмотр лендинга в новой вкладке"
+      >
+        <Icon name="Eye" size={15} />
+        <span className="hidden sm:inline">Тест</span>
+      </a>
+
+      {published && (
+        <button
+          onClick={shareVk}
+          className="flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+          title="Поделиться лендингом ВКонтакте"
+        >
+          <Icon name="Share2" size={15} />
+          <span className="hidden sm:inline">Поделиться в ВК</span>
+        </button>
       )}
 
       {onClear && (

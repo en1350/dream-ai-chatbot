@@ -36,6 +36,7 @@ def handler(event: dict, context) -> dict:
 
     params = event.get("queryStringParameters") or {}
     slug = params.get("slug")
+    preview = params.get("preview") == "1"
     if not slug:
         return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "slug is required"})}
 
@@ -50,7 +51,7 @@ def handler(event: dict, context) -> dict:
                 WHERE l.slug = '{escape(slug)}'"""
         )
         row = cur.fetchone()
-        if not row or not row[4]:
+        if not row or (not row[4] and not preview):
             return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Landing not found"})}
 
         blocks = row[2] if isinstance(row[2], (list, dict)) else json.loads(row[2] or "[]")

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import LandingRenderer from "@/components/landing-builder/LandingRenderer";
 import { LandingBlock, LandingTheme, DEFAULT_THEME } from "@/components/landing-builder/types";
@@ -7,6 +7,8 @@ import func2url from "../../backend/func2url.json";
 
 const PublicLanding = () => {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const isPreview = searchParams.get("preview") === "1";
   const [blocks, setBlocks] = useState<LandingBlock[]>([]);
   const [theme, setTheme] = useState<LandingTheme>(DEFAULT_THEME);
   const [vkGroupId, setVkGroupId] = useState<number | null>(null);
@@ -15,7 +17,8 @@ const PublicLanding = () => {
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`${func2url["landing-public"]}?slug=${encodeURIComponent(slug)}`)
+    const previewParam = isPreview ? "&preview=1" : "";
+    fetch(`${func2url["landing-public"]}?slug=${encodeURIComponent(slug)}${previewParam}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -49,7 +52,19 @@ const PublicLanding = () => {
     );
   }
 
-  return <LandingRenderer blocks={blocks} theme={theme} vkGroupId={vkGroupId} slug={slug} />;
+  return (
+    <>
+      {isPreview && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 py-2 bg-amber-400 text-ink text-sm font-medium">
+          <Icon name="Eye" size={14} />
+          Предпросмотр — эта страница ещё не опубликована
+        </div>
+      )}
+      <div className={isPreview ? "pt-9" : ""}>
+        <LandingRenderer blocks={blocks} theme={theme} vkGroupId={vkGroupId} slug={slug} />
+      </div>
+    </>
+  );
 };
 
 export default PublicLanding;

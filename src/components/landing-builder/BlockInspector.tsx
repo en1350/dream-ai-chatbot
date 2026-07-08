@@ -1,4 +1,5 @@
 import Icon from "@/components/ui/icon";
+import MediaUploader from "@/components/shared/MediaUploader";
 import { LandingBlock } from "./types";
 
 interface Props {
@@ -59,15 +60,13 @@ export default function BlockInspector({ block, onUpdate, onDelete, onClose, bot
         )}
 
         {block.type === "hero" && (
-          <div>
-            <label className="text-xs text-white/50 mb-1.5 block">Ссылка на визуал</label>
-            <input
-              value={block.image || ""}
-              onChange={(e) => onUpdate({ image: e.target.value })}
-              placeholder="https://…"
-              className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
-            />
-          </div>
+          <MediaUploader
+            kind="image"
+            label="Изображение"
+            value={block.image || ""}
+            onChange={(url) => onUpdate({ image: url })}
+            folder="landing-blocks"
+          />
         )}
 
         {(block.type === "hero" || block.type === "cta") && (

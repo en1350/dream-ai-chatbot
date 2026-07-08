@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import NodeCard from "./NodeCard";
 import { BotNode, BotEdge } from "./types";
@@ -12,11 +12,12 @@ interface Props {
   onMove: (id: string, x: number, y: number) => void;
   onConnect: (source: string, target: string, label?: string) => void;
   onDelete: (id: string) => void;
+  onDeleteEdge?: (id: string) => void;
   onDrop: (subtype: string, x: number, y: number) => void;
   onDragStart?: () => void;
 }
 
-export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onConnect, onDelete, onDrop, onDragStart }: Props) {
+export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onConnect, onDelete, onDeleteEdge, onDrop, onDragStart }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -24,6 +25,22 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
   const [panning, setPanning] = useState<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
   const [connectFrom, setConnectFrom] = useState<{ id: string; label?: string } | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedEdgeId) {
+        const target = e.target as HTMLElement;
+        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+        e.preventDefault();
+        onDeleteEdge?.(selectedEdgeId);
+        setSelectedEdgeId(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedEdgeId, onDeleteEdge]);
 
   const toWorld = useCallback(
     (clientX: number, clientY: number) => {
@@ -60,6 +77,7 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
     setPanning({ startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y });
     onSelect(null);
     setConnectFrom(null);
+    setSelectedEdgeId(null);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -107,6 +125,9 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
               <path d="M0,0 L8,4 L0,8 Z" fill="#2B7FFF" />
             </marker>
+            <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#18E0C8" />
+            </marker>
           </defs>
           {edges.map((edge) => {
             const s = nodes.find((n) => n.id === edge.source);
@@ -115,23 +136,54 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             const sx = s.x + portOffsetX(s, edge.label), sy = s.y + 88;
             const tx = t.x + NODE_WIDTH / 2, ty = t.y;
             const midX = (sx + tx) / 2, midY = (sy + ty) / 2;
+            const isSelected = selectedEdgeId === edge.id;
+            const isHovered = hoveredEdgeId === edge.id;
+            const active = isSelected || isHovered;
             return (
               <g key={edge.id}>
+                {/* широкая невидимая область для удобного клика/наведения */}
                 <path
                   d={edgePath(sx, sy, tx, ty)}
-                  stroke="#2B7FFF"
-                  strokeWidth={2}
+                  stroke="transparent"
+                  strokeWidth={18}
                   fill="none"
-                  markerEnd="url(#arrow)"
-                  opacity={0.7}
+                  style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                  onClick={(e) => { e.stopPropagation(); setSelectedEdgeId(edge.id); }}
+                  onMouseEnter={() => setHoveredEdgeId(edge.id)}
+                  onMouseLeave={() => setHoveredEdgeId((h) => (h === edge.id ? null : h))}
                 />
-                {edge.label && (
+                <path
+                  d={edgePath(sx, sy, tx, ty)}
+                  stroke={active ? "#18E0C8" : "#2B7FFF"}
+                  strokeWidth={active ? 3 : 2}
+                  fill="none"
+                  markerEnd={active ? "url(#arrow-active)" : "url(#arrow)"}
+                  opacity={active ? 1 : 0.7}
+                  style={{ pointerEvents: "none", transition: "stroke 0.15s, stroke-width 0.15s" }}
+                />
+                {edge.label && !active && (
                   <foreignObject x={midX - 50} y={midY - 11} width={100} height={22} style={{ overflow: "visible" }}>
                     <div className="flex justify-center pointer-events-none">
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-ink2 border border-electric/30 text-electric/90 whitespace-nowrap">
                         {edge.label}
                       </span>
                     </div>
+                  </foreignObject>
+                )}
+                {active && onDeleteEdge && (
+                  <foreignObject x={midX - 11} y={midY - 11} width={22} height={22} style={{ overflow: "visible" }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteEdge(edge.id);
+                        setSelectedEdgeId((sid) => (sid === edge.id ? null : sid));
+                      }}
+                      title="Удалить связь"
+                      style={{ pointerEvents: "auto" }}
+                      className="w-[22px] h-[22px] rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white shadow-lg transition-colors"
+                    >
+                      <Icon name="X" size={12} />
+                    </button>
                   </foreignObject>
                 )}
               </g>

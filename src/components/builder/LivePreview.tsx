@@ -18,6 +18,9 @@ interface Msg {
   text: string;
   buttons?: string[];
   isList?: boolean;
+  imageUrl?: string;
+  videoUrl?: string;
+  linkUrl?: string;
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -26,11 +29,21 @@ function findStart(nodes: BotNode[]): BotNode | null {
   return nodes.find((n) => n.subtype === "start") ?? null;
 }
 
+function nodeToMsg(node: BotNode): Msg {
+  return {
+    from: "bot",
+    text: node.text || node.title,
+    buttons: node.buttons,
+    isList: getResponseType(node) === "list",
+    imageUrl: node.imageUrl,
+    videoUrl: node.videoUrl,
+    linkUrl: node.linkUrl,
+  };
+}
+
 export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose, onReset }: Props) {
   const start = findStart(nodes);
-  const [messages, setMessages] = useState<Msg[]>(() =>
-    start ? [{ from: "bot", text: start.text || start.title, buttons: start.buttons, isList: getResponseType(start) === "list" }] : []
-  );
+  const [messages, setMessages] = useState<Msg[]>(() => (start ? [nodeToMsg(start)] : []));
   const [currentId, setCurrentId] = useState<string | null>(start?.id ?? null);
   const [awaitingEmail, setAwaitingEmail] = useState(() => (start ? getCollectEmail(start) : false));
   const [input, setInput] = useState("");
@@ -67,7 +80,7 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
       return;
     }
 
-    pushBot(node.text || node.title, node.buttons, getResponseType(node) === "list");
+    setMessages((m) => [...m, nodeToMsg(node)]);
     setAwaitingEmail(getCollectEmail(node));
   };
 
@@ -154,7 +167,7 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
     const s = findStart(nodes);
     setCurrentId(s?.id ?? null);
     setAwaitingEmail(s ? getCollectEmail(s) : false);
-    setMessages(s ? [{ from: "bot", text: s.text || s.title, buttons: s.buttons, isList: getResponseType(s) === "list" }] : []);
+    setMessages(s ? [nodeToMsg(s)] : []);
   };
 
   return (
@@ -207,6 +220,12 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
         )}
         {messages.map((m, i) => (
           <div key={i} className={`flex flex-col ${m.from === "user" ? "items-end" : "items-start"}`}>
+            {m.imageUrl && (
+              <img src={m.imageUrl} alt="" className="max-w-[80%] rounded-2xl mb-1.5 object-cover" />
+            )}
+            {m.videoUrl && (
+              <video src={m.videoUrl} controls className="max-w-[80%] rounded-2xl mb-1.5" />
+            )}
             <div
               className={`max-w-[80%] px-4 py-2.5 text-sm rounded-2xl ${
                 m.from === "user" ? "bg-electric text-white rounded-br-sm" : "bg-white/8 text-white/90 rounded-bl-sm"
@@ -214,6 +233,17 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
             >
               {m.text}
             </div>
+            {m.linkUrl && (
+              <a
+                href={m.linkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 mt-1.5 text-xs text-electric hover:underline max-w-[80%] truncate"
+              >
+                <Icon name="ExternalLink" size={12} className="shrink-0" />
+                <span className="truncate">{m.linkUrl}</span>
+              </a>
+            )}
             {m.from === "bot" && m.buttons && m.buttons.length > 0 && i === messages.length - 1 && (
               m.isList ? (
                 <div className="flex flex-col gap-1.5 mt-2 max-w-[85%] w-full">

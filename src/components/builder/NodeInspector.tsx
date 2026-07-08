@@ -14,7 +14,8 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
   const def = NODE_DEF_MAP[node.subtype];
   const meta = CATEGORY_META[node.category];
   const [newBtn, setNewBtn] = useState("");
-  const supportsButtons = node.subtype === "text" || node.subtype === "buttons";
+  const isList = node.subtype === "list";
+  const supportsButtons = node.subtype === "text" || node.subtype === "buttons" || isList;
   const isEmailCollect = node.subtype === "email-collect";
 
   return (
@@ -57,19 +58,34 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
 
         {supportsButtons && (
           <div>
-            <label className="text-xs text-white/50 mb-1.5 block">Кнопки быстрых ответов</label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {node.buttons.map((b, i) => (
-                <span key={i} className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-electric/10 border border-electric/25 text-electric">
-                  {b}
-                  <button
-                    onClick={() => onUpdate({ buttons: node.buttons.filter((_, idx) => idx !== i) })}
-                    className="hover:text-white transition-colors"
-                  >
-                    <Icon name="X" size={11} />
-                  </button>
-                </span>
-              ))}
+            <label className="text-xs text-white/50 mb-1.5 block">
+              {isList ? "Пункты списка" : "Кнопки быстрых ответов"}
+            </label>
+            <div className={isList ? "space-y-1.5 mb-2" : "flex flex-wrap gap-2 mb-2"}>
+              {node.buttons.map((b, i) =>
+                isList ? (
+                  <div key={i} className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-lg bg-electric/10 border border-electric/25">
+                    <span className="text-xs text-electric/70 shrink-0">{i + 1}.</span>
+                    <span className="text-xs text-electric flex-1 truncate">{b}</span>
+                    <button
+                      onClick={() => onUpdate({ buttons: node.buttons.filter((_, idx) => idx !== i) })}
+                      className="text-electric/60 hover:text-white transition-colors shrink-0 p-0.5"
+                    >
+                      <Icon name="X" size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <span key={i} className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-electric/10 border border-electric/25 text-electric">
+                    {b}
+                    <button
+                      onClick={() => onUpdate({ buttons: node.buttons.filter((_, idx) => idx !== i) })}
+                      className="hover:text-white transition-colors"
+                    >
+                      <Icon name="X" size={11} />
+                    </button>
+                  </span>
+                )
+              )}
             </div>
             <div className="flex gap-2">
               <input
@@ -81,7 +97,7 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
                     setNewBtn("");
                   }
                 }}
-                placeholder="Текст кнопки"
+                placeholder={isList ? "Текст пункта списка" : "Текст кнопки"}
                 className="flex-1 h-9 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
               />
               <button
@@ -98,7 +114,9 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
             </div>
             {node.buttons.length > 0 && (
               <p className="text-[11px] text-white/35 mt-2 leading-relaxed">
-                У каждой кнопки на холсте своя точка снизу блока — соедините её со следующим шагом, чтобы диалог шёл в нужную ветку.
+                {isList
+                  ? "У каждого пункта списка своя точка снизу блока — соедините её со следующим шагом, чтобы диалог шёл в нужную ветку."
+                  : "У каждой кнопки на холсте своя точка снизу блока — соедините её со следующим шагом, чтобы диалог шёл в нужную ветку."}
               </p>
             )}
           </div>

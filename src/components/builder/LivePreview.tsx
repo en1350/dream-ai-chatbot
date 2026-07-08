@@ -16,6 +16,7 @@ interface Msg {
   from: "bot" | "user";
   text: string;
   buttons?: string[];
+  isList?: boolean;
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -27,7 +28,7 @@ function findStart(nodes: BotNode[]): BotNode | undefined {
 export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose, onReset }: Props) {
   const start = findStart(nodes);
   const [messages, setMessages] = useState<Msg[]>(() =>
-    start ? [{ from: "bot", text: start.text || start.title, buttons: start.buttons }] : []
+    start ? [{ from: "bot", text: start.text || start.title, buttons: start.buttons, isList: start.subtype === "list" }] : []
   );
   const [currentId, setCurrentId] = useState<string | null>(start?.id ?? null);
   const [awaitingEmail, setAwaitingEmail] = useState(() => start?.subtype === "email-collect");
@@ -37,8 +38,8 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
   const active = nodes.find((n) => n.id === activeNodeId);
   const aiNode = nodes.find((n) => n.category === "ai");
 
-  const pushBot = (text: string, buttons?: string[]) => {
-    setMessages((m) => [...m, { from: "bot", text, buttons }]);
+  const pushBot = (text: string, buttons?: string[], isList?: boolean) => {
+    setMessages((m) => [...m, { from: "bot", text, buttons, isList }]);
   };
 
   const enterNode = async (node: BotNode) => {
@@ -65,7 +66,7 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
       return;
     }
 
-    pushBot(node.text || node.title, node.buttons);
+    pushBot(node.text || node.title, node.buttons, node.subtype === "list");
     setAwaitingEmail(node.subtype === "email-collect");
   };
 
@@ -152,7 +153,7 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
     const s = findStart(nodes);
     setCurrentId(s?.id ?? null);
     setAwaitingEmail(s?.subtype === "email-collect");
-    setMessages(s ? [{ from: "bot", text: s.text || s.title, buttons: s.buttons }] : []);
+    setMessages(s ? [{ from: "bot", text: s.text || s.title, buttons: s.buttons, isList: s.subtype === "list" }] : []);
   };
 
   return (
@@ -213,17 +214,32 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
               {m.text}
             </div>
             {m.from === "bot" && m.buttons && m.buttons.length > 0 && i === messages.length - 1 && (
-              <div className="flex flex-wrap gap-1.5 mt-2 max-w-[85%]">
-                {m.buttons.map((b, bi) => (
-                  <button
-                    key={bi}
-                    onClick={() => send(b)}
-                    className="text-xs px-3 py-1.5 rounded-full border border-electric/30 text-electric hover:bg-electric/10 transition-colors"
-                  >
-                    {b}
-                  </button>
-                ))}
-              </div>
+              m.isList ? (
+                <div className="flex flex-col gap-1.5 mt-2 max-w-[85%] w-full">
+                  {m.buttons.map((b, bi) => (
+                    <button
+                      key={bi}
+                      onClick={() => send(b)}
+                      className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl border border-electric/30 text-electric hover:bg-electric/10 transition-colors text-left"
+                    >
+                      <span className="text-electric/60 shrink-0">{bi + 1}.</span>
+                      <span className="truncate">{b}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5 mt-2 max-w-[85%]">
+                  {m.buttons.map((b, bi) => (
+                    <button
+                      key={bi}
+                      onClick={() => send(b)}
+                      className="text-xs px-3 py-1.5 rounded-full border border-electric/30 text-electric hover:bg-electric/10 transition-colors"
+                    >
+                      {b}
+                    </button>
+                  ))}
+                </div>
+              )
             )}
           </div>
         ))}

@@ -26,6 +26,7 @@ export default function NodeCard({
 }: Props) {
   const def = NODE_DEF_MAP[node.subtype];
   const meta = CATEGORY_META[node.category];
+  const isList = node.subtype === "list";
   const ports: (string | undefined)[] = node.buttons.length > 0 ? node.buttons : [undefined];
 
   return (
@@ -68,7 +69,17 @@ export default function NodeCard({
 
         <div className="px-3.5 py-2.5">
           <p className="text-xs text-white/50 leading-relaxed line-clamp-2">{node.text || "—"}</p>
-          {node.buttons.length > 0 && (
+          {node.buttons.length > 0 && isList && (
+            <div className="flex flex-col gap-1 mt-2">
+              {node.buttons.map((b, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-md bg-electric/10 border border-electric/25 text-electric/90">
+                  <span className="text-electric/60 shrink-0">{i + 1}.</span>
+                  <span className="truncate">{b}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {node.buttons.length > 0 && !isList && (
             <div className="flex flex-wrap gap-1 mt-2">
               {node.buttons.map((b, i) => (
                 <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-electric/10 border border-electric/25 text-electric/90">

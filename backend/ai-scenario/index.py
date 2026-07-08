@@ -6,16 +6,16 @@ import urllib.error
 
 ALLOWED_SUBTYPES = {
     "start": "trigger", "keyword": "trigger", "button-trigger": "trigger", "webhook-in": "trigger",
-    "text": "message", "image": "message", "buttons": "message", "typing": "message",
+    "text": "message", "image": "message", "buttons": "message", "list": "message", "typing": "message",
     "condition": "logic", "random": "logic", "delay": "logic",
-    "save-var": "data", "validate": "data",
+    "save-var": "data", "validate": "data", "email-collect": "data",
     "gpt": "ai", "intent": "ai",
     "crm": "integration", "webhook-out": "integration", "telegram": "integration", "operator": "integration",
 }
 
 SYSTEM_PROMPT = """Ты — помощник конструктора чат-ботов для ВКонтакте. По короткому описанию бизнеса и задачи собери граф сценария бота.
 
-Используй ТОЛЬКО такие subtype блоков: start, keyword, button-trigger, webhook-in, text, image, buttons, typing, condition, random, delay, save-var, validate, gpt, intent, crm, webhook-out, telegram, operator.
+Используй ТОЛЬКО такие subtype блоков: start, keyword, button-trigger, webhook-in, text, image, buttons, list, typing, condition, random, delay, save-var, validate, email-collect, gpt, intent, crm, webhook-out, telegram, operator.
 
 Правила:
 - Сценарий должен начинаться с ровно одного блока subtype="start".

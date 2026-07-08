@@ -18,6 +18,7 @@ export const NODE_DEFS: NodeDef[] = [
   { subtype: "text", category: "message", label: "Текст", icon: "Type", defaultTitle: "Сообщение", defaultText: "Здравствуйте! Чем можем помочь?" },
   { subtype: "image", category: "message", label: "Картинка", icon: "Image", defaultTitle: "Картинка", defaultText: "photo.jpg" },
   { subtype: "buttons", category: "message", label: "Кнопки ответа", icon: "ListChecks", defaultTitle: "Кнопки", defaultText: "Выберите вариант" },
+  { subtype: "list", category: "message", label: "Список", icon: "List", defaultTitle: "Список", defaultText: "Выберите один из пунктов" },
   { subtype: "typing", category: "message", label: "Задержка «печатает»", icon: "Ellipsis", defaultTitle: "Печатает…", defaultText: "1.5 сек" },
 
   { subtype: "condition", category: "logic", label: "Условие", icon: "SplitSquareVertical", defaultTitle: "Условие", defaultText: "если текст содержит «цена»" },

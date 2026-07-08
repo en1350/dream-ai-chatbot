@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import { BotNode, BotEdge } from "./types";
+import { getResponseType, getCollectEmail } from "./nodeHelpers";
 import func2url from "../../../backend/func2url.json";
 
 interface Props {
@@ -28,10 +29,10 @@ function findStart(nodes: BotNode[]): BotNode | undefined {
 export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose, onReset }: Props) {
   const start = findStart(nodes);
   const [messages, setMessages] = useState<Msg[]>(() =>
-    start ? [{ from: "bot", text: start.text || start.title, buttons: start.buttons, isList: start.subtype === "list" }] : []
+    start ? [{ from: "bot", text: start.text || start.title, buttons: start.buttons, isList: getResponseType(start) === "list" }] : []
   );
   const [currentId, setCurrentId] = useState<string | null>(start?.id ?? null);
-  const [awaitingEmail, setAwaitingEmail] = useState(() => start?.subtype === "email-collect");
+  const [awaitingEmail, setAwaitingEmail] = useState(() => (start ? getCollectEmail(start) : false));
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
 
@@ -66,8 +67,8 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
       return;
     }
 
-    pushBot(node.text || node.title, node.buttons, node.subtype === "list");
-    setAwaitingEmail(node.subtype === "email-collect");
+    pushBot(node.text || node.title, node.buttons, getResponseType(node) === "list");
+    setAwaitingEmail(getCollectEmail(node));
   };
 
   const advance = (label?: string) => {
@@ -152,8 +153,8 @@ export default function LivePreview({ nodes, edges, botId, activeNodeId, onClose
     onReset();
     const s = findStart(nodes);
     setCurrentId(s?.id ?? null);
-    setAwaitingEmail(s?.subtype === "email-collect");
-    setMessages(s ? [{ from: "bot", text: s.text || s.title, buttons: s.buttons, isList: s.subtype === "list" }] : []);
+    setAwaitingEmail(s ? getCollectEmail(s) : false);
+    setMessages(s ? [{ from: "bot", text: s.text || s.title, buttons: s.buttons, isList: getResponseType(s) === "list" }] : []);
   };
 
   return (

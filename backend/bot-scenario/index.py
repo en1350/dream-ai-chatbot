@@ -70,6 +70,8 @@ def handler(event: dict, context) -> dict:
                     "buttons": extra.get("buttons", []),
                     "category": extra.get("category", "message"),
                     "successText": extra.get("successText", ""),
+                    "responseType": extra.get("responseType"),
+                    "collectEmail": extra.get("collectEmail", False),
                 })
 
             cur.execute(
@@ -113,6 +115,8 @@ def handler(event: dict, context) -> dict:
                     "buttons": n.get("buttons", []),
                     "category": n.get("category", "message"),
                     "successText": n.get("successText", ""),
+                    "responseType": n.get("responseType"),
+                    "collectEmail": bool(n.get("collectEmail", False)),
                 })
                 cur.execute(
                     f"""INSERT INTO {SCHEMA}.bot_nodes (bot_id, node_id, type, label, message, pos_x, pos_y, extra)

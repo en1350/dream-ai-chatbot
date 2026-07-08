@@ -1,7 +1,9 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
+import { Switch } from "@/components/ui/switch";
 import { BotNode } from "./types";
 import { NODE_DEF_MAP, CATEGORY_META } from "./nodeDefs";
+import { getResponseType, getCollectEmail } from "./nodeHelpers";
 
 interface Props {
   node: BotNode;
@@ -14,9 +16,18 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
   const def = NODE_DEF_MAP[node.subtype];
   const meta = CATEGORY_META[node.category];
   const [newBtn, setNewBtn] = useState("");
-  const isList = node.subtype === "list";
-  const supportsButtons = node.subtype === "text" || node.subtype === "buttons" || isList;
-  const isEmailCollect = node.subtype === "email-collect";
+  const responseType = getResponseType(node);
+  const isList = responseType === "list";
+  const supportsButtons = responseType !== "none";
+  const isEmailCollect = getCollectEmail(node);
+
+  const setResponseType = (type: "none" | "buttons" | "list") => {
+    if (type === "none") {
+      onUpdate({ responseType: type, buttons: [] });
+    } else {
+      onUpdate({ responseType: type });
+    }
+  };
 
   return (
     <aside className="w-80 shrink-0 h-full border-l border-white/8 bg-ink2/60 backdrop-blur-xl flex flex-col">
@@ -54,6 +65,39 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
             rows={4}
             className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors resize-none"
           />
+        </div>
+
+        <div>
+          <label className="text-xs text-white/50 mb-1.5 block">Тип ответа пользователя</label>
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              onClick={() => setResponseType("none")}
+              className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-colors ${
+                responseType === "none" ? "border-electric bg-electric/10 text-white" : "border-white/10 text-white/50 hover:text-white hover:border-white/25"
+              }`}
+            >
+              <Icon name="MessageSquare" size={15} />
+              Просто текст
+            </button>
+            <button
+              onClick={() => setResponseType("buttons")}
+              className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-colors ${
+                responseType === "buttons" ? "border-electric bg-electric/10 text-white" : "border-white/10 text-white/50 hover:text-white hover:border-white/25"
+              }`}
+            >
+              <Icon name="ListChecks" size={15} />
+              Кнопки
+            </button>
+            <button
+              onClick={() => setResponseType("list")}
+              className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs transition-colors ${
+                responseType === "list" ? "border-electric bg-electric/10 text-white" : "border-white/10 text-white/50 hover:text-white hover:border-white/25"
+              }`}
+            >
+              <Icon name="List" size={15} />
+              Список
+            </button>
+          </div>
         </div>
 
         {supportsButtons && (
@@ -122,9 +166,22 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
           </div>
         )}
 
-        {isEmailCollect && (
-          <>
-            <div>
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 shrink-0 rounded-lg bg-aqua/15 flex items-center justify-center">
+                <Icon name="Mail" size={15} className="text-aqua" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm text-white">Собирать email</div>
+                <div className="text-[11px] text-white/40 truncate">Сохранит заявку в раздел «Заявки»</div>
+              </div>
+            </div>
+            <Switch checked={isEmailCollect} onCheckedChange={(v) => onUpdate({ collectEmail: v })} />
+          </div>
+
+          {isEmailCollect && (
+            <div className="mt-3.5 pt-3.5 border-t border-white/8">
               <label className="text-xs text-white/50 mb-1.5 block">Текст после отправки</label>
               <input
                 value={node.successText || ""}
@@ -132,19 +189,12 @@ export default function NodeInspector({ node, onUpdate, onDelete, onClose }: Pro
                 placeholder="Спасибо! Мы свяжемся с вами."
                 className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
               />
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
-              <div className="flex items-center gap-2 text-xs text-white/60 mb-1">
-                <Icon name="Info" size={13} className="text-aqua" />
-                Как это работает
-              </div>
-              <p className="text-xs text-white/45 leading-relaxed">
-                Бот попросит пользователя ввести email прямо в диалоге, проверит формат и сохранит заявку
-                в раздел «Заявки» личного кабинета.
+              <p className="text-[11px] text-white/35 mt-2 leading-relaxed">
+                Бот попросит пользователя ввести email прямо в диалоге на этом шаге, проверит формат и сохранит заявку.
               </p>
             </div>
-          </>
-        )}
+          )}
+        </div>
 
         {node.category === "ai" && (
           <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">

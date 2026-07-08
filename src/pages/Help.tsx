@@ -151,11 +151,19 @@ const Help = () => {
             <StepCard n={5} title="Проверьте в тестовом чате" text="Кнопка «Тест» в верхней панели открывает окно предпросмотра — проверьте, как бот отвечает." />
             <StepCard n={6} title="Опубликуйте" text="Когда сценарий готов, нажмите «Опубликовать» — бот начнёт отвечать реальным пользователям." />
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 flex items-start gap-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 flex items-start gap-3 mb-4">
             <Icon name="Sparkles" size={18} className="text-aqua shrink-0 mt-0.5" />
             <p className="text-sm text-white/60 leading-relaxed">
               Не хочется собирать сценарий вручную? Нажмите кнопку с ИИ в конструкторе, опишите задачу в одном предложении
               («Бот для записи в барбершоп: спроси услугу, дату и телефон») — сценарий соберётся автоматически.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-electric/20 bg-electric/5 p-4 flex items-start gap-3">
+            <Icon name="Wand2" size={18} className="text-electric shrink-0 mt-0.5" />
+            <p className="text-sm text-white/60 leading-relaxed">
+              В настройках любого блока теперь есть переключатель «Тип ответа пользователя» — просто текст, кнопки
+              или список — и отдельный тумблер «Собирать email». Их можно включить сразу в одном блоке: например,
+              показать список услуг и одновременно попросить почту для связи.
             </p>
           </div>
         </Section>

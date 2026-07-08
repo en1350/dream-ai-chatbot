@@ -18,6 +18,8 @@ export interface BotNode {
   title: string;
   text: string;
   buttons: string[];
+  responseType?: "buttons" | "list";
+  collectEmail?: boolean;
   x: number;
   y: number;
   successText?: string;

@@ -2,6 +2,7 @@ import Icon from "@/components/ui/icon";
 import { BotNode } from "./types";
 import { NODE_DEF_MAP, CATEGORY_META } from "./nodeDefs";
 import { NODE_WIDTH, portOffsetX } from "./portUtils";
+import { getResponseType, getCollectEmail } from "./nodeHelpers";
 
 interface Props {
   node: BotNode;
@@ -26,7 +27,8 @@ export default function NodeCard({
 }: Props) {
   const def = NODE_DEF_MAP[node.subtype];
   const meta = CATEGORY_META[node.category];
-  const isList = node.subtype === "list";
+  const isList = getResponseType(node) === "list";
+  const collectEmail = getCollectEmail(node);
   const ports: (string | undefined)[] = node.buttons.length > 0 ? node.buttons : [undefined];
 
   return (
@@ -57,6 +59,11 @@ export default function NodeCard({
             <Icon name={def?.icon || "Box"} size={14} style={{ color: meta.color }} />
           </div>
           <span className="text-sm font-medium text-white truncate flex-1">{node.title}</span>
+          {collectEmail && (
+            <div title="Собирает email" className="w-5 h-5 shrink-0 rounded-md bg-aqua/15 flex items-center justify-center">
+              <Icon name="Mail" size={11} className="text-aqua" />
+            </div>
+          )}
           {selected && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(); }}

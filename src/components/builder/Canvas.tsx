@@ -2,7 +2,6 @@ import { useRef, useState, useCallback } from "react";
 import Icon from "@/components/ui/icon";
 import NodeCard from "./NodeCard";
 import { BotNode, BotEdge } from "./types";
-import { CATEGORY_META } from "./nodeDefs";
 import { NODE_WIDTH, portOffsetX } from "./portUtils";
 
 interface Props {
@@ -14,13 +13,14 @@ interface Props {
   onConnect: (source: string, target: string, label?: string) => void;
   onDelete: (id: string) => void;
   onDrop: (subtype: string, x: number, y: number) => void;
+  onDragStart?: () => void;
 }
 
-export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onConnect, onDelete, onDrop }: Props) {
+export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onConnect, onDelete, onDrop, onDragStart }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [dragging, setDragging] = useState<{ id: string; offX: number; offY: number } | null>(null);
+  const [dragging, setDragging] = useState<{ id: string; offX: number; offY: number; moved: boolean } | null>(null);
   const [panning, setPanning] = useState<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
   const [connectFrom, setConnectFrom] = useState<{ id: string; label?: string } | null>(null);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
@@ -40,6 +40,10 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
     const p = toWorld(e.clientX, e.clientY);
     setMouse(p);
     if (dragging) {
+      if (!dragging.moved) {
+        onDragStart?.();
+        setDragging({ ...dragging, moved: true });
+      }
       onMove(dragging.id, p.x - dragging.offX, p.y - dragging.offY);
     } else if (panning) {
       setPan({ x: panning.panX + (e.clientX - panning.startX), y: panning.panY + (e.clientY - panning.startY) });
@@ -158,7 +162,7 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             onPointerDown={(e) => {
               e.stopPropagation();
               const p = toWorld(e.clientX, e.clientY);
-              setDragging({ id: n.id, offX: p.x - n.x, offY: p.y - n.y });
+              setDragging({ id: n.id, offX: p.x - n.x, offY: p.y - n.y, moved: false });
             }}
             onStartConnect={(label) => setConnectFrom({ id: n.id, label })}
             onFinishConnect={() => {

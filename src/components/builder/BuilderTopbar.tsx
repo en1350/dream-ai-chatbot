@@ -21,9 +21,11 @@ interface Props {
   saveStatus?: "saved" | "saving" | "error";
   onClear?: () => void;
   onSaveNow?: () => void;
+  onUndo?: () => void;
+  canUndo?: boolean;
 }
 
-export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow }: Props) {
+export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow, onUndo, canUndo }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(botName);
   const navigate = useNavigate();
@@ -79,6 +81,18 @@ export default function BuilderTopbar({ botName, onRename, previewOpen, onToggle
         <span className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full shrink-0">
           <Icon name="TriangleAlert" size={11} /> Ошибка сохранения
         </span>
+      )}
+
+      {onUndo && (
+        <button
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Отменить последнее действие (Ctrl+Z)"
+          className="flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-white/60 disabled:cursor-default shrink-0"
+        >
+          <Icon name="Undo2" size={15} />
+          <span className="hidden sm:inline">Отменить</span>
+        </button>
       )}
 
       <div className="flex-1" />

@@ -31,9 +31,41 @@ const BotBuilder = () => {
   const [loading, setLoading] = useState(!isNew);
   const [loadError, setLoadError] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [history, setHistory] = useState<{ nodes: BotNode[]; edges: BotEdge[] }[]>([]);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRun = useRef(true);
+  const editTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const pushHistory = useCallback(() => {
+    setHistory((h) => [...h.slice(-19), { nodes, edges }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges]);
+
+  // Для текстовых правок копим один снимок истории на "пачку" быстрых изменений (debounce),
+  // чтобы отмена не откатывала посимвольно, а возвращала к состоянию до правки блока.
+  const pushHistoryDebounced = useCallback(() => {
+    if (editTimer.current) {
+      clearTimeout(editTimer.current);
+    } else {
+      pushHistory();
+    }
+    editTimer.current = setTimeout(() => {
+      editTimer.current = null;
+    }, 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pushHistory]);
+
+  const undo = useCallback(() => {
+    setHistory((h) => {
+      if (h.length === 0) return h;
+      const prev = h[h.length - 1];
+      setNodes(prev.nodes);
+      setEdges(prev.edges);
+      setSelectedId(null);
+      return h.slice(0, -1);
+    });
+  }, []);
 
   // Создание нового бота в БД или загрузка существующего сценария
   useEffect(() => {
@@ -130,16 +162,29 @@ const BotBuilder = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges, botName, realBotId, loading]);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo]);
+
   const clearScenario = useCallback(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    pushHistory();
     setNodes([]);
     setEdges([]);
     setSelectedId(null);
-  }, []);
+  }, [pushHistory]);
 
   const addNode = useCallback((subtype: string, x?: number, y?: number) => {
     const def = NODE_DEF_MAP[subtype];
     if (!def) return;
+    pushHistory();
     const id = uid();
     setNodes((ns) => [
       ...ns,
@@ -157,9 +202,11 @@ const BotBuilder = () => {
       },
     ]);
     setSelectedId(id);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pushHistory]);
 
   const updateNode = (id: string, patch: Partial<BotNode>) => {
+    pushHistoryDebounced();
     setNodes((ns) => ns.map((n) => (n.id === id ? { ...n, ...patch } : n)));
   };
 
@@ -168,12 +215,14 @@ const BotBuilder = () => {
   };
 
   const deleteNode = (id: string) => {
+    pushHistory();
     setNodes((ns) => ns.filter((n) => n.id !== id));
     setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
     setSelectedId((s) => (s === id ? null : s));
   };
 
   const connectNodes = (source: string, target: string, label?: string) => {
+    pushHistory();
     setEdges((es) => {
       if (es.some((e) => e.source === source && e.target === target && (e.label || "") === (label || ""))) return es;
       return [...es, { id: `e${Date.now()}`, source, target, label }];
@@ -184,6 +233,7 @@ const BotBuilder = () => {
     nodes: { id: string; subtype: string; category: string; title: string; text: string }[];
     edges: { source: string; target: string }[];
   }) => {
+    pushHistory();
     const idMap: Record<string, string> = {};
     const newNodes: BotNode[] = data.nodes.map((n, i) => {
       const id = uid();
@@ -244,6 +294,8 @@ const BotBuilder = () => {
         saveStatus={saveStatus}
         onClear={clearScenario}
         onSaveNow={saveNow}
+        onUndo={undo}
+        canUndo={history.length > 0}
       />
       <div className="flex flex-1 min-h-0">
         <NodePalette onAddNode={(subtype) => addNode(subtype)} onOpenAiModal={() => setAiModalOpen(true)} />
@@ -256,6 +308,7 @@ const BotBuilder = () => {
           onConnect={connectNodes}
           onDelete={deleteNode}
           onDrop={(subtype, x, y) => addNode(subtype, x, y)}
+          onDragStart={pushHistory}
         />
         {selected && (
           <NodeInspector

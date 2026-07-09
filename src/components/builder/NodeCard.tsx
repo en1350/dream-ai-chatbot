@@ -10,7 +10,7 @@ interface Props {
   connecting: boolean;
   onPointerDown: (e: React.PointerEvent) => void;
   onSelect: () => void;
-  onStartConnect: (label: string | undefined, e: React.MouseEvent) => void;
+  onStartConnect: (label: string | undefined, e: React.PointerEvent) => void;
   onFinishConnect: () => void;
   onDelete: () => void;
 }
@@ -46,6 +46,7 @@ export default function NodeCard({
         {/* top port */}
         <div
           onClick={(e) => { e.stopPropagation(); onFinishConnect(); }}
+          onPointerUp={(e) => { e.stopPropagation(); onFinishConnect(); }}
           className={`absolute -top-[7px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 border-ink2 z-10 transition-colors ${
             connecting ? "bg-electric cursor-cell scale-125" : "bg-white/25 cursor-default"
           }`}
@@ -120,7 +121,7 @@ export default function NodeCard({
         {ports.map((label, i) => (
           <div
             key={i}
-            onMouseDown={(e) => { e.stopPropagation(); onStartConnect(label, e); }}
+            onPointerDown={(e) => { e.stopPropagation(); onStartConnect(label, e); }}
             title={label ? `Тяните, чтобы соединить ветку «${label}»` : "Тяните, чтобы соединить с другим блоком"}
             className="absolute -bottom-[7px] w-3.5 h-3.5 rounded-full border-2 border-ink2 cursor-crosshair hover:scale-125 transition-transform z-10"
             style={{ background: meta.color, left: portOffsetX(node, label), transform: "translateX(-50%)" }}

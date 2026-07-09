@@ -45,6 +45,7 @@ export default function NodeCard({
       >
         {/* top port */}
         <div
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onFinishConnect(); }}
           onPointerUp={(e) => { e.stopPropagation(); onFinishConnect(); }}
           className={`absolute -top-[7px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 border-ink2 z-10 transition-colors ${

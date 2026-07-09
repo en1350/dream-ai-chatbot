@@ -56,21 +56,49 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
   const handlePointerMove = (e: React.PointerEvent) => {
     const p = toWorld(e.clientX, e.clientY);
     setMouse(p);
-    if (dragging) {
-      if (!dragging.moved) {
-        onDragStart?.();
-        setDragging({ ...dragging, moved: true });
-      }
-      onMove(dragging.id, p.x - dragging.offX, p.y - dragging.offY);
-    } else if (panning) {
+    if (panning) {
       setPan({ x: panning.panX + (e.clientX - panning.startX), y: panning.panY + (e.clientY - panning.startY) });
     }
   };
 
   const handlePointerUp = () => {
-    setDragging(null);
     setPanning(null);
   };
+
+  // Перетаскивание блока отслеживаем на уровне окна (в фазе перехвата — capture), а не только
+  // холста: если отпустить кнопку мыши над другим блоком или его точкой соединения, событие
+  // может быть остановлено там (stopPropagation) и не дойти до холста в обычной фазе всплытия —
+  // тогда блок "прилипал" бы к курсору навсегда. Фаза перехвата срабатывает раньше и не зависит
+  // от stopPropagation дочерних элементов.
+  useEffect(() => {
+    if (!dragging) return;
+    const handleMove = (e: PointerEvent) => {
+      const p = toWorld(e.clientX, e.clientY);
+      setMouse(p);
+      if (!dragging.moved) {
+        onDragStart?.();
+        setDragging({ ...dragging, moved: true });
+      }
+      onMove(dragging.id, p.x - dragging.offX, p.y - dragging.offY);
+    };
+    const handleUp = () => setDragging(null);
+    window.addEventListener("pointermove", handleMove, true);
+    window.addEventListener("pointerup", handleUp, true);
+    return () => {
+      window.removeEventListener("pointermove", handleMove, true);
+      window.removeEventListener("pointerup", handleUp, true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging, toWorld, onMove, onDragStart]);
+
+  // Аналогично для протягивания стрелки: если отпустить кнопку не точно на верхней точке
+  // блока-получателя, соединение должно корректно отмениться, а не "зависнуть".
+  useEffect(() => {
+    if (!connectFrom) return;
+    const handleUp = () => setConnectFrom(null);
+    window.addEventListener("pointerup", handleUp, true);
+    return () => window.removeEventListener("pointerup", handleUp, true);
+  }, [connectFrom]);
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
     if (e.target !== ref.current && !(e.target as HTMLElement).classList.contains("canvas-bg")) return;

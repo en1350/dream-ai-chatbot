@@ -7,9 +7,6 @@ interface Props {
   onUpdate: (patch: Partial<LandingBlock>) => void;
   onDelete: () => void;
   onClose: () => void;
-  bots: { id: number; name: string }[];
-  botId: number | null;
-  onBotChange: (botId: number | null) => void;
 }
 
 const BLOCK_LABELS: Record<string, string> = {
@@ -20,7 +17,7 @@ const BLOCK_LABELS: Record<string, string> = {
   "email-form": "Форма — email",
 };
 
-export default function BlockInspector({ block, onUpdate, onDelete, onClose, bots, botId, onBotChange }: Props) {
+export default function BlockInspector({ block, onUpdate, onDelete, onClose }: Props) {
   return (
     <aside className="w-80 shrink-0 h-full border-l border-white/8 bg-ink2/60 backdrop-blur-xl flex flex-col">
       <div className="flex items-center gap-3 p-4 border-b border-white/8">
@@ -158,7 +155,7 @@ export default function BlockInspector({ block, onUpdate, onDelete, onClose, bot
               Кнопка ведёт в сообщения сообщества
             </div>
             <p className="text-xs text-white/45 leading-relaxed">
-              Работает после подключения бота к сообществу ВКонтакте в разделе «Интеграции».
+              Чат-бот для этого блока выбирается в общих настройках лендинга (закройте панель блока) — там же можно подключить сообщество ВКонтакте в разделе «Интеграции».
             </p>
           </div>
         )}
@@ -224,21 +221,6 @@ export default function BlockInspector({ block, onUpdate, onDelete, onClose, bot
             </div>
           </>
         )}
-
-        <div className="pt-2 border-t border-white/8">
-          <label className="text-xs text-white/50 mb-1.5 block">Привязанный чат-бот</label>
-          <select
-            value={botId ?? ""}
-            onChange={(e) => onBotChange(e.target.value ? Number(e.target.value) : null)}
-            className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white focus:border-electric focus:outline-none transition-colors"
-          >
-            <option value="" className="bg-ink2">Не выбран</option>
-            {bots.map((b) => (
-              <option key={b.id} value={b.id} className="bg-ink2">{b.name}</option>
-            ))}
-          </select>
-          <p className="text-xs text-white/35 mt-1.5">Определяет, куда ведёт блок «ВКонтакте»</p>
-        </div>
 
         <button
           onClick={onDelete}

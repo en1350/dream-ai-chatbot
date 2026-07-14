@@ -219,12 +219,17 @@ const LandingBuilder = () => {
             onUpdate={(patch) => updateBlock(selectedIndex as number, patch)}
             onDelete={() => deleteBlock(selectedIndex as number)}
             onClose={() => setSelectedIndex(null)}
+          />
+        ) : (
+          <LandingSettingsPanel
+            slug={slug}
+            onSlugChange={setSlug}
+            theme={theme}
+            onThemeChange={setTheme}
             bots={bots}
             botId={botId}
             onBotChange={setBotId}
           />
-        ) : (
-          <LandingSettingsPanel slug={slug} onSlugChange={setSlug} theme={theme} onThemeChange={setTheme} />
         )}
       </div>
     </div>

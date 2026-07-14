@@ -8,11 +8,18 @@ interface Landing {
   name: string;
   slug: string;
   published: boolean;
+  botId: number | null;
+}
+
+interface Bot {
+  id: number;
+  name: string;
 }
 
 export default function LandingsList() {
   const navigate = useNavigate();
   const [landings, setLandings] = useState<Landing[]>([]);
+  const [bots, setBots] = useState<Bot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -28,7 +35,13 @@ export default function LandingsList() {
       })
       .catch(() => setError("Не удалось загрузить список лендингов"))
       .finally(() => setLoading(false));
+
+    fetch(func2url["bots"])
+      .then((res) => res.json())
+      .then((data) => setBots(data.bots || []));
   }, []);
+
+  const botName = (botId: number | null) => bots.find((b) => b.id === botId)?.name;
 
   return (
     <div>
@@ -95,6 +108,15 @@ export default function LandingsList() {
               </div>
               <h3 className="text-white font-semibold mb-1 group-hover:text-aqua transition-colors">{l.name}</h3>
               <p className="text-white/50 text-sm truncate">/l/{l.slug}</p>
+              {botName(l.botId) ? (
+                <span className="inline-flex items-center gap-1.5 text-xs text-aqua bg-aqua/10 px-2 py-1 rounded-full mt-2.5">
+                  <Icon name="Bot" size={11} /> {botName(l.botId)}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs text-white/35 bg-white/5 px-2 py-1 rounded-full mt-2.5">
+                  <Icon name="Unplug" size={11} /> Бот не привязан
+                </span>
+              )}
               <div className="flex items-center gap-1.5 text-sm text-electric mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 Открыть конструктор <Icon name="ArrowRight" size={14} />
               </div>

@@ -1,0 +1,2 @@
+ALTER TABLE t_p20031221_dream_ai_chatbot.users
+  ADD COLUMN IF NOT EXISTS plan VARCHAR(50) NOT NULL DEFAULT 'start';

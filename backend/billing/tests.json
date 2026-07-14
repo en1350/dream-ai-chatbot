@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Получить текущий тариф и лимиты",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"planId": "string", "planName": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

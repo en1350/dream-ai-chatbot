@@ -19,6 +19,15 @@ interface RealEvent {
   createdAt: string | null;
 }
 
+interface Billing {
+  planId: string;
+  planName: string;
+  usage: {
+    bots: { current: number; max: number | null };
+    dialogs: { current: number; max: number | null };
+  };
+}
+
 const checklist = [
   { text: "Создать первого бота", done: false },
   { text: "Подключить сообщество ВК", done: false },
@@ -50,6 +59,7 @@ export default function Overview() {
   const [events, setEvents] = useState<RealEvent[]>([]);
   const [eventsTotal, setEventsTotal] = useState(0);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [billing, setBilling] = useState<Billing | null>(null);
 
   useEffect(() => {
     fetch(func2url["bots"])
@@ -64,6 +74,10 @@ export default function Overview() {
         setEventsTotal(data.total || 0);
       })
       .finally(() => setEventsLoading(false));
+
+    fetch(func2url["billing"])
+      .then((res) => res.json())
+      .then((data) => setBilling(data));
   }, []);
 
   const doneCount = checklist.filter((c) => c.done).length;
@@ -75,11 +89,12 @@ export default function Overview() {
     { label: "Конверсия в заявку", value: "0%", icon: "Target" },
   ];
 
-  const limits = [
-    { label: "Диалоги", cur: 0, max: 1000, color: "from-electric to-aqua" },
-    { label: "AI-запросы", cur: 0, max: 1000, color: "from-amber-400 to-orange-500" },
-    { label: "Боты", cur: bots.length, max: 5, color: "from-aqua to-electric" },
-  ];
+  const limits = billing
+    ? [
+        { label: "Диалоги", cur: billing.usage.dialogs.current, max: billing.usage.dialogs.max, color: "from-electric to-aqua" },
+        { label: "Боты", cur: billing.usage.bots.current, max: billing.usage.bots.max, color: "from-aqua to-electric" },
+      ]
+    : [];
 
   return (
     <div>
@@ -136,18 +151,21 @@ export default function Overview() {
         {/* Limits */}
         <Card>
           <h3 className="text-white font-semibold mb-1">Лимиты тарифа</h3>
-          <p className="text-xs text-white/40 mb-5">План «Бизнес»</p>
+          <p className="text-xs text-white/40 mb-5">План «{billing?.planName || "…"}»</p>
           <div className="space-y-5">
             {limits.map((l) => {
-              const pct = l.max > 0 ? Math.round((l.cur / l.max) * 100) : 0;
+              const unlimited = l.max === null;
+              const pct = !unlimited && l.max > 0 ? Math.round((l.cur / l.max) * 100) : 0;
               return (
                 <div key={l.label}>
                   <div className="flex justify-between text-sm mb-1.5">
                     <span className="text-white/70">{l.label}</span>
-                    <span className={pct > 85 ? "text-amber-400" : "text-white/50"}>{l.cur}/{l.max}</span>
+                    <span className={pct > 85 ? "text-amber-400" : "text-white/50"}>
+                      {l.cur}/{unlimited ? "∞" : l.max}
+                    </span>
                   </div>
                   <div className="h-2 rounded-full bg-white/8 overflow-hidden">
-                    <div className={`h-full rounded-full bg-gradient-to-r ${l.color}`} style={{ width: `${pct}%` }} />
+                    <div className={`h-full rounded-full bg-gradient-to-r ${l.color}`} style={{ width: `${unlimited ? 100 : pct}%` }} />
                   </div>
                 </div>
               );

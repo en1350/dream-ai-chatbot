@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import func2url from "../../../backend/func2url.json";
 
 const nav = [
   { id: "overview", label: "Обзор", icon: "LayoutDashboard" },
@@ -24,7 +25,14 @@ interface Props {
 
 export default function Sidebar({ active, onSelect }: Props) {
   const [open, setOpen] = useState(false);
+  const [planName, setPlanName] = useState("…");
   const nav2 = useNavigate();
+
+  useEffect(() => {
+    fetch(func2url["billing"])
+      .then((res) => res.json())
+      .then((data) => setPlanName(data.planName || "Старт"));
+  }, []);
 
   const Item = ({ item }: { item: { id: string; label: string; icon: string } }) => (
     <button
@@ -53,7 +61,7 @@ export default function Sidebar({ active, onSelect }: Props) {
           <Icon name="Bot" size={22} className="text-ink" />
         </div>
         <span className={`font-display text-xl tracking-wide text-white transition-all ${open ? "opacity-100" : "opacity-0 w-0"}`}>
-          BotVK
+          Каскад
         </span>
       </button>
 
@@ -86,7 +94,7 @@ export default function Sidebar({ active, onSelect }: Props) {
           </div>
           <div className={`transition-all ${open ? "opacity-100" : "opacity-0 w-0 overflow-hidden"}`}>
             <div className="text-sm text-white leading-tight whitespace-nowrap">Алексей</div>
-            <div className="text-[11px] text-aqua whitespace-nowrap">Бизнес</div>
+            <div className="text-[11px] text-aqua whitespace-nowrap">{planName}</div>
           </div>
         </div>
       </div>

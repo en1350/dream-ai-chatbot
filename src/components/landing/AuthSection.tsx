@@ -20,7 +20,7 @@ export default function AuthSection() {
             <h3 className="font-display text-2xl text-white">
               {mode === "register" ? "Создать аккаунт" : "Вход в кабинет"}
             </h3>
-            <p className="text-sm text-white/50 mt-1">Личный кабинет BotVK</p>
+            <p className="text-sm text-white/50 mt-1">Личный кабинет Каскад</p>
           </div>
 
           <div className="flex gap-1 p-1 rounded-full bg-white/5 mb-6">

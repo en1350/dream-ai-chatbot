@@ -19,7 +19,7 @@ const Terms = () => {
         <div className="space-y-6 text-white/70 text-sm leading-relaxed">
           <section>
             <h2 className="text-white font-semibold mb-2">1. Общие положения</h2>
-            <p>Используя сервис BotVK, вы соглашаетесь с настоящими условиями. Если вы не согласны с каким-либо пунктом — пожалуйста, не используйте сервис.</p>
+            <p>Используя сервис Каскад, вы соглашаетесь с настоящими условиями. Если вы не согласны с каким-либо пунктом — пожалуйста, не используйте сервис.</p>
           </section>
           <section>
             <h2 className="text-white font-semibold mb-2">2. Учётная запись</h2>

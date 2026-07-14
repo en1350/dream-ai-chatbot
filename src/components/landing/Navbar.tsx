@@ -16,7 +16,7 @@ export default function Navbar() {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-electric to-aqua flex items-center justify-center">
             <Icon name="Bot" size={20} className="text-ink" />
           </div>
-          <span className="font-display text-xl tracking-wide text-white">BotVK</span>
+          <span className="font-display text-xl tracking-wide text-white">Каскад</span>
         </a>
         <nav className="hidden md:flex items-center gap-8">
           {links.map((l) => (

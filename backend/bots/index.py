@@ -26,7 +26,7 @@ def row_to_bot(row) -> dict:
 
 
 def handler(event: dict, context) -> dict:
-    """Список ботов пользователя и создание нового бота. GET — список, POST — создать бота (name, description)."""
+    """Боты пользователя. GET — список, POST — создать (name, description), PUT — сменить статус публикации (id, status)."""
     method = event.get("httpMethod", "GET")
 
     if method == "OPTIONS":
@@ -75,6 +75,32 @@ def handler(event: dict, context) -> dict:
             row = cur.fetchone()
             conn.commit()
             return {"statusCode": 201, "headers": headers, "body": json.dumps({"bot": row_to_bot(row)})}
+
+        if method == "PUT":
+            try:
+                body = json.loads(event.get("body") or "{}")
+            except json.JSONDecodeError:
+                return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "Invalid JSON"})}
+
+            bot_id = body.get("id")
+            if not bot_id or not str(bot_id).isdigit():
+                return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "id is required"})}
+
+            status = body.get("status")
+            if status not in ("active", "inactive"):
+                return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "status must be active or inactive"})}
+
+            cur.execute(
+                f"""UPDATE {SCHEMA}.bots
+                    SET status = '{status}', updated_at = now()
+                    WHERE id = {int(bot_id)} AND user_id = {DEFAULT_USER_ID}
+                    RETURNING id, name, description, status, dialogs_count, created_at"""
+            )
+            row = cur.fetchone()
+            if not row:
+                return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Bot not found"})}
+            conn.commit()
+            return {"statusCode": 200, "headers": headers, "body": json.dumps({"bot": row_to_bot(row)})}
 
         return {"statusCode": 405, "headers": headers, "body": json.dumps({"error": "Method not allowed"})}
     finally:

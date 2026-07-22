@@ -12,6 +12,22 @@
       "path": "/",
       "expectedStatus": 200,
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "PUT without id returns 400",
+      "method": "PUT",
+      "path": "/",
+      "body": {"status": "active"},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "PUT invalid status returns 400",
+      "method": "PUT",
+      "path": "/",
+      "body": {"id": 1, "status": "wrong"},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
     }
   ]
 }

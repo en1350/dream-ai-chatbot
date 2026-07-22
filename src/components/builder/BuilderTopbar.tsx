@@ -23,9 +23,12 @@ interface Props {
   onSaveNow?: () => void;
   onUndo?: () => void;
   canUndo?: boolean;
+  botStatus?: "active" | "inactive";
+  publishing?: boolean;
+  onTogglePublish?: () => void;
 }
 
-export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow, onUndo, canUndo }: Props) {
+export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow, onUndo, canUndo, botStatus = "inactive", publishing = false, onTogglePublish }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(botName);
   const navigate = useNavigate();
@@ -154,10 +157,26 @@ export default function BuilderTopbar({ botName, onRename, previewOpen, onToggle
         <Icon name="MessageCircle" size={15} />
         Тест
       </button>
-      <button className="flex items-center gap-2 px-4 h-9 rounded-lg bg-gradient-to-r from-electric to-aqua text-ink text-sm font-semibold hover:shadow-[0_0_25px_rgba(43,127,255,0.4)] transition-all">
-        <Icon name="Rocket" size={15} />
-        Опубликовать
-      </button>
+      {botStatus === "active" ? (
+        <button
+          onClick={onTogglePublish}
+          disabled={publishing}
+          title="Бот опубликован. Нажмите, чтобы снять с публикации"
+          className="flex items-center gap-2 px-4 h-9 rounded-lg bg-aqua/15 border border-aqua/40 text-aqua text-sm font-semibold hover:bg-aqua/25 transition-all disabled:opacity-50 disabled:cursor-default"
+        >
+          <Icon name={publishing ? "Loader2" : "CircleCheck"} size={15} className={publishing ? "animate-spin" : ""} />
+          {publishing ? "Обновляю…" : "Опубликован"}
+        </button>
+      ) : (
+        <button
+          onClick={onTogglePublish}
+          disabled={publishing || !onTogglePublish}
+          className="flex items-center gap-2 px-4 h-9 rounded-lg bg-gradient-to-r from-electric to-aqua text-ink text-sm font-semibold hover:shadow-[0_0_25px_rgba(43,127,255,0.4)] transition-all disabled:opacity-50 disabled:cursor-default disabled:hover:shadow-none"
+        >
+          <Icon name={publishing ? "Loader2" : "Rocket"} size={15} className={publishing ? "animate-spin" : ""} />
+          {publishing ? "Публикую…" : "Опубликовать"}
+        </button>
+      )}
     </header>
   );
 }

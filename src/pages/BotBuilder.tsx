@@ -31,6 +31,8 @@ const BotBuilder = () => {
   const [loading, setLoading] = useState(!isNew);
   const [loadError, setLoadError] = useState("");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [botStatus, setBotStatus] = useState<"active" | "inactive">("inactive");
+  const [publishing, setPublishing] = useState(false);
   const [history, setHistory] = useState<{ nodes: BotNode[]; edges: BotEdge[] }[]>([]);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +104,7 @@ const BotBuilder = () => {
         }
         setRealBotId(data.bot.id);
         setBotName(data.bot.name);
+        setBotStatus(data.bot.status === "active" ? "active" : "inactive");
         setNodes(
           data.nodes.map((n: any) => ({
             id: n.id,
@@ -141,6 +144,35 @@ const BotBuilder = () => {
       .catch(() => setSaveStatus("error"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realBotId, botName, nodes, edges]);
+
+  // Публикация/снятие с публикации бота: сначала сохраняем сценарий, затем меняем статус.
+  const togglePublish = useCallback(() => {
+    if (!realBotId || publishing) return;
+    const nextStatus = botStatus === "active" ? "inactive" : "active";
+    setPublishing(true);
+    setSaveStatus("saving");
+    fetch(func2url["bot-scenario"], {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ botId: realBotId, name: botName, nodes, edges }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setSaveStatus(data.success ? "saved" : "error");
+        return fetch(func2url["bots"], {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: realBotId, status: nextStatus }),
+        });
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.bot) setBotStatus(data.bot.status === "active" ? "active" : "inactive");
+      })
+      .catch(() => setSaveStatus("error"))
+      .finally(() => setPublishing(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realBotId, botStatus, botName, nodes, edges, publishing]);
 
   // Автосохранение с debounce при изменении сценария
   useEffect(() => {
@@ -328,6 +360,9 @@ const BotBuilder = () => {
         onSaveNow={saveNow}
         onUndo={undo}
         canUndo={history.length > 0}
+        botStatus={botStatus}
+        publishing={publishing}
+        onTogglePublish={togglePublish}
       />
       <div className="flex flex-1 min-h-0">
         <NodePalette onAddNode={(subtype) => addNode(subtype)} onOpenAiModal={() => setAiModalOpen(true)} />

@@ -17,9 +17,6 @@ interface Props {
   onDragStart?: () => void;
 }
 
-// Высота карточки по умолчанию, пока реальный размер ещё не измерен (первая отрисовка).
-const DEFAULT_NODE_HEIGHT = 88;
-
 export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onConnect, onDelete, onDeleteEdge, onDrop, onDragStart }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -30,45 +27,90 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
-  const cardEls = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [nodeHeights, setNodeHeights] = useState<Record<string, number>>({});
 
-  // Реальная высота карточек блоков зависит от содержимого (картинка, список кнопок и т.п.),
-  // поэтому фиксированное смещение для нижней точки соединения давало разрыв между стрелкой
-  // и портом блока. Отслеживаем фактическую высоту каждой карточки через ResizeObserver.
-  useEffect(() => {
-    const observer = new ResizeObserver((entries) => {
-      setNodeHeights((prev) => {
-        let changed = false;
-        const next = { ...prev };
-        for (const entry of entries) {
-          const id = (entry.target as HTMLElement).dataset.nodeId;
-          if (!id) continue;
-          const h = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-          if (next[id] !== h) {
-            next[id] = h;
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
+  // Стрелки должны начинаться и заканчиваться точно в реальных точках-портах блока (кружки
+  // сверху/снизу карточки), а не в позиции, вычисленной по предполагаемой высоте карточки —
+  // высота зависит от содержимого (картинка, список кнопок и т.п.) и такой расчёт даёт разрыв
+  // между линией и портом. Поэтому меряем фактическое положение портов в DOM напрямую.
+  const topPortEls = useRef<Map<string, HTMLDivElement>>(new Map());
+  const bottomPortEls = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [topPorts, setTopPorts] = useState<Record<string, { x: number; y: number }>>({});
+  const [bottomPorts, setBottomPorts] = useState<Record<string, { x: number; y: number }>>({});
+
+  const measurePorts = useCallback(() => {
+    const canvasRect = ref.current?.getBoundingClientRect();
+    if (!canvasRect) return;
+    const toLocal = (rect: DOMRect) => ({
+      x: (rect.left + rect.width / 2 - canvasRect.left - pan.x) / scale,
+      y: (rect.top + rect.height / 2 - canvasRect.top - pan.y) / scale,
     });
-    cardEls.current.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes.map((n) => n.id).join(",")]);
 
-  // Мемоизируем колбэк-реф на каждый id, чтобы не пересоздавать функцию на каждый рендер
-  // (иначе React будет заново отвязывать/привязывать ref у каждой карточки при любом апдейте).
+    setTopPorts((prev) => {
+      let changed = false;
+      const next: Record<string, { x: number; y: number }> = {};
+      topPortEls.current.forEach((el, id) => {
+        const p = toLocal(el.getBoundingClientRect());
+        next[id] = p;
+        if (!prev[id] || prev[id].x !== p.x || prev[id].y !== p.y) changed = true;
+      });
+      if (!changed && Object.keys(prev).length === Object.keys(next).length) return prev;
+      return next;
+    });
+
+    setBottomPorts((prev) => {
+      let changed = false;
+      const next: Record<string, { x: number; y: number }> = {};
+      bottomPortEls.current.forEach((el, key) => {
+        const p = toLocal(el.getBoundingClientRect());
+        next[key] = p;
+        if (!prev[key] || prev[key].x !== p.x || prev[key].y !== p.y) changed = true;
+      });
+      if (!changed && Object.keys(prev).length === Object.keys(next).length) return prev;
+      return next;
+    });
+  }, [pan, scale]);
+
+  useEffect(() => {
+    measurePorts();
+  });
+
+  const bottomPortKey = (nodeId: string, label?: string) => `${nodeId}::${label ?? ""}`;
+
+  // Мемоизируем колбэки-рефы, чтобы не пересоздавать функции на каждый рендер
+  // (иначе React будет заново отвязывать/привязывать ref у каждого порта при любом апдейте).
   const cardRefCallbacks = useRef<Map<string, (el: HTMLDivElement | null) => void>>(new Map());
   const getCardRef = useCallback((id: string) => {
     let fn = cardRefCallbacks.current.get(id);
     if (!fn) {
-      fn = (el: HTMLDivElement | null) => {
-        if (el) cardEls.current.set(id, el);
-        else cardEls.current.delete(id);
-      };
+      fn = () => {};
       cardRefCallbacks.current.set(id, fn);
+    }
+    return fn;
+  }, []);
+
+  const topPortRefCallbacks = useRef<Map<string, (el: HTMLDivElement | null) => void>>(new Map());
+  const getTopPortRef = useCallback((id: string) => {
+    let fn = topPortRefCallbacks.current.get(id);
+    if (!fn) {
+      fn = (el: HTMLDivElement | null) => {
+        if (el) topPortEls.current.set(id, el);
+        else topPortEls.current.delete(id);
+      };
+      topPortRefCallbacks.current.set(id, fn);
+    }
+    return fn;
+  }, []);
+
+  const bottomPortRefCallbacks = useRef<Map<string, (el: HTMLDivElement | null) => void>>(new Map());
+  const getBottomPortRef = useCallback((nodeId: string) => {
+    let fn = bottomPortRefCallbacks.current.get(nodeId);
+    if (!fn) {
+      fn = (label: string | undefined, el: HTMLDivElement | null) => {
+        const key = bottomPortKey(nodeId, label);
+        if (el) bottomPortEls.current.set(key, el);
+        else bottomPortEls.current.delete(key);
+      };
+      bottomPortRefCallbacks.current.set(nodeId, fn);
     }
     return fn;
   }, []);
@@ -216,8 +258,12 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             const s = nodes.find((n) => n.id === edge.source);
             const t = nodes.find((n) => n.id === edge.target);
             if (!s || !t) return null;
-            const sx = s.x + portOffsetX(s, edge.label), sy = s.y + (nodeHeights[s.id] ?? DEFAULT_NODE_HEIGHT);
-            const tx = t.x + NODE_WIDTH / 2, ty = t.y;
+            const bottom = bottomPorts[bottomPortKey(s.id, edge.label)];
+            const top = topPorts[t.id];
+            // Пока порты ещё не измерены (первый кадр после монтирования) — считаем по геометрии,
+            // чтобы стрелка не "прыгала" из нулевой точки.
+            const sx = bottom?.x ?? s.x + portOffsetX(s, edge.label), sy = bottom?.y ?? s.y + 88;
+            const tx = top?.x ?? t.x + NODE_WIDTH / 2, ty = top?.y ?? t.y;
             const midX = (sx + tx) / 2, midY = (sy + ty) / 2;
             const isSelected = selectedEdgeId === edge.id;
             const isHovered = hoveredEdgeId === edge.id;
@@ -275,9 +321,11 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
           {connectFrom && (() => {
             const s = nodes.find((n) => n.id === connectFrom.id);
             if (!s) return null;
+            const bottom = bottomPorts[bottomPortKey(s.id, connectFrom.label)];
+            const sx = bottom?.x ?? s.x + portOffsetX(s, connectFrom.label), sy = bottom?.y ?? s.y + 88;
             return (
               <path
-                d={edgePath(s.x + portOffsetX(s, connectFrom.label), s.y + (nodeHeights[s.id] ?? DEFAULT_NODE_HEIGHT), mouse.x, mouse.y)}
+                d={edgePath(sx, sy, mouse.x, mouse.y)}
                 stroke="#18E0C8"
                 strokeWidth={2}
                 strokeDasharray="5 5"
@@ -308,6 +356,8 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             }}
             onDelete={() => onDelete(n.id)}
             cardRef={getCardRef(n.id)}
+            topPortRef={getTopPortRef(n.id)}
+            bottomPortRef={getBottomPortRef(n.id)}
           />
         ))}
       </div>

@@ -17,6 +17,9 @@ interface Props {
   onDragStart?: () => void;
 }
 
+// Высота карточки по умолчанию, пока реальный размер ещё не измерен (первая отрисовка).
+const DEFAULT_NODE_HEIGHT = 88;
+
 export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onConnect, onDelete, onDeleteEdge, onDrop, onDragStart }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -27,6 +30,48 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const cardEls = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [nodeHeights, setNodeHeights] = useState<Record<string, number>>({});
+
+  // Реальная высота карточек блоков зависит от содержимого (картинка, список кнопок и т.п.),
+  // поэтому фиксированное смещение для нижней точки соединения давало разрыв между стрелкой
+  // и портом блока. Отслеживаем фактическую высоту каждой карточки через ResizeObserver.
+  useEffect(() => {
+    const observer = new ResizeObserver((entries) => {
+      setNodeHeights((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const entry of entries) {
+          const id = (entry.target as HTMLElement).dataset.nodeId;
+          if (!id) continue;
+          const h = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+          if (next[id] !== h) {
+            next[id] = h;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    });
+    cardEls.current.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes.map((n) => n.id).join(",")]);
+
+  // Мемоизируем колбэк-реф на каждый id, чтобы не пересоздавать функцию на каждый рендер
+  // (иначе React будет заново отвязывать/привязывать ref у каждой карточки при любом апдейте).
+  const cardRefCallbacks = useRef<Map<string, (el: HTMLDivElement | null) => void>>(new Map());
+  const getCardRef = useCallback((id: string) => {
+    let fn = cardRefCallbacks.current.get(id);
+    if (!fn) {
+      fn = (el: HTMLDivElement | null) => {
+        if (el) cardEls.current.set(id, el);
+        else cardEls.current.delete(id);
+      };
+      cardRefCallbacks.current.set(id, fn);
+    }
+    return fn;
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -171,7 +216,7 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             const s = nodes.find((n) => n.id === edge.source);
             const t = nodes.find((n) => n.id === edge.target);
             if (!s || !t) return null;
-            const sx = s.x + portOffsetX(s, edge.label), sy = s.y + 88;
+            const sx = s.x + portOffsetX(s, edge.label), sy = s.y + (nodeHeights[s.id] ?? DEFAULT_NODE_HEIGHT);
             const tx = t.x + NODE_WIDTH / 2, ty = t.y;
             const midX = (sx + tx) / 2, midY = (sy + ty) / 2;
             const isSelected = selectedEdgeId === edge.id;
@@ -232,7 +277,7 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
             if (!s) return null;
             return (
               <path
-                d={edgePath(s.x + portOffsetX(s, connectFrom.label), s.y + 88, mouse.x, mouse.y)}
+                d={edgePath(s.x + portOffsetX(s, connectFrom.label), s.y + (nodeHeights[s.id] ?? DEFAULT_NODE_HEIGHT), mouse.x, mouse.y)}
                 stroke="#18E0C8"
                 strokeWidth={2}
                 strokeDasharray="5 5"
@@ -262,6 +307,7 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
               setConnectFrom(null);
             }}
             onDelete={() => onDelete(n.id)}
+            cardRef={getCardRef(n.id)}
           />
         ))}
       </div>

@@ -13,6 +13,7 @@ interface Props {
   onStartConnect: (label: string | undefined, e: React.PointerEvent) => void;
   onFinishConnect: () => void;
   onDelete: () => void;
+  cardRef?: (el: HTMLDivElement | null) => void;
 }
 
 export default function NodeCard({
@@ -24,6 +25,7 @@ export default function NodeCard({
   onStartConnect,
   onFinishConnect,
   onDelete,
+  cardRef,
 }: Props) {
   const def = NODE_DEF_MAP[node.subtype];
   const meta = CATEGORY_META[node.category];
@@ -33,6 +35,8 @@ export default function NodeCard({
 
   return (
     <div
+      ref={cardRef}
+      data-node-id={node.id}
       className="absolute select-none"
       style={{ left: node.x, top: node.y, width: NODE_WIDTH }}
       onPointerDown={onPointerDown}

@@ -1,10 +1,14 @@
+export type CtaLinkType = "url" | "email" | "bot";
+
 export interface LandingBlock {
-  type: "hero" | "features" | "cta" | "vk" | "email-form";
+  type: "hero" | "features" | "cta" | "vk" | "email-form" | "image";
   title?: string;
   subtitle?: string;
   ctaText?: string;
   ctaLink?: string;
+  ctaLinkType?: CtaLinkType;
   image?: string;
+  caption?: string;
   features?: { icon: string; title: string; text: string }[];
   vkGroupUrl?: string;
   formFields?: ("name" | "phone")[];
@@ -41,6 +45,7 @@ export const emptyBlocks = (): LandingBlock[] => [
     subtitle: "Короткое пояснение, почему стоит оставить заявку прямо сейчас",
     ctaText: "Оставить заявку",
     ctaLink: "#cta",
+    ctaLinkType: "url",
     image: "",
   },
   {

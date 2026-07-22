@@ -15,7 +15,14 @@ const BLOCK_LABELS: Record<string, string> = {
   cta: "Призыв к действию",
   vk: "Интеграция с ВКонтакте",
   "email-form": "Форма — email",
+  image: "Картинка",
 };
+
+const LINK_TYPES: { value: "url" | "email" | "bot"; label: string; icon: string }[] = [
+  { value: "url", label: "Сайт / якорь", icon: "Link" },
+  { value: "email", label: "Почта", icon: "Mail" },
+  { value: "bot", label: "Чат-бот ВК", icon: "MessageCircle" },
+];
 
 export default function BlockInspector({ block, onUpdate, onDelete, onClose }: Props) {
   return (
@@ -76,15 +83,63 @@ export default function BlockInspector({ block, onUpdate, onDelete, onClose }: P
                 className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white focus:border-electric focus:outline-none transition-colors"
               />
             </div>
+
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Ссылка кнопки</label>
-              <input
-                value={block.ctaLink || ""}
-                onChange={(e) => onUpdate({ ctaLink: e.target.value })}
-                placeholder="#cta или https://…"
-                className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
-              />
+              <label className="text-xs text-white/50 mb-1.5 block">Куда ведёт кнопка</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {LINK_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => onUpdate({ ctaLinkType: t.value })}
+                    className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-[11px] transition-colors ${
+                      (block.ctaLinkType || "url") === t.value
+                        ? "border-electric/50 bg-electric/10 text-white"
+                        : "border-white/10 text-white/50 hover:bg-white/5"
+                    }`}
+                  >
+                    <Icon name={t.icon} size={14} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {(block.ctaLinkType || "url") === "url" && (
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">Ссылка кнопки</label>
+                <input
+                  value={block.ctaLink || ""}
+                  onChange={(e) => onUpdate({ ctaLink: e.target.value })}
+                  placeholder="#cta или https://…"
+                  className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+                />
+              </div>
+            )}
+
+            {block.ctaLinkType === "email" && (
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">Email для связи</label>
+                <input
+                  value={block.ctaLink || ""}
+                  onChange={(e) => onUpdate({ ctaLink: e.target.value })}
+                  placeholder="you@mail.ru"
+                  className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+                />
+                <p className="text-xs text-white/35 mt-1.5">Откроется почтовый клиент с этим адресом</p>
+              </div>
+            )}
+
+            {block.ctaLinkType === "bot" && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+                <div className="flex items-center gap-2 text-xs text-white/60 mb-1">
+                  <Icon name="Info" size={13} className="text-aqua" />
+                  Ведёт в сообщения бота ВКонтакте
+                </div>
+                <p className="text-xs text-white/45 leading-relaxed">
+                  Чат-бот выбирается в общих настройках лендинга — там же подключается сообщество ВКонтакте.
+                </p>
+              </div>
+            )}
           </>
         )}
 
@@ -218,6 +273,27 @@ export default function BlockInspector({ block, onUpdate, onDelete, onClose }: P
               <p className="text-xs text-white/45 leading-relaxed">
                 Email обязателен для отправки. После публикации лендинга форма начнёт собирать заявки в личный кабинет.
               </p>
+            </div>
+          </>
+        )}
+
+        {block.type === "image" && (
+          <>
+            <MediaUploader
+              kind="image"
+              label="Картинка"
+              value={block.image || ""}
+              onChange={(url) => onUpdate({ image: url })}
+              folder="landing-blocks"
+            />
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Подпись (необязательно)</label>
+              <input
+                value={block.caption || ""}
+                onChange={(e) => onUpdate({ caption: e.target.value })}
+                placeholder="Подпись под картинкой"
+                className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+              />
             </div>
           </>
         )}

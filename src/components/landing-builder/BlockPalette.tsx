@@ -15,7 +15,17 @@ const PRESETS: { icon: string; label: string; block: LandingBlock }[] = [
       subtitle: "Короткое пояснение выгоды для клиента",
       ctaText: "Оставить заявку",
       ctaLink: "#cta",
+      ctaLinkType: "url",
       image: "",
+    },
+  },
+  {
+    icon: "Image",
+    label: "Картинка",
+    block: {
+      type: "image",
+      image: "",
+      caption: "",
     },
   },
   {
@@ -39,6 +49,7 @@ const PRESETS: { icon: string; label: string; block: LandingBlock }[] = [
       subtitle: "Оставьте заявку — и мы свяжемся с вами в течение 15 минут",
       ctaText: "Оставить заявку",
       ctaLink: "#cta",
+      ctaLinkType: "url",
     },
   },
   {

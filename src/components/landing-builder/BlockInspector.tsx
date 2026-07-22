@@ -204,15 +204,75 @@ export default function BlockInspector({ block, onUpdate, onDelete, onClose }: P
         )}
 
         {block.type === "vk" && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
-            <div className="flex items-center gap-2 text-xs text-white/60 mb-1">
-              <Icon name="Info" size={13} className="text-aqua" />
-              Кнопка ведёт в сообщения сообщества
+          <>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Куда ведёт кнопка</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {LINK_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => onUpdate({ ctaLinkType: t.value })}
+                    className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-[11px] transition-colors ${
+                      (block.ctaLinkType || "bot") === t.value
+                        ? "border-electric/50 bg-electric/10 text-white"
+                        : "border-white/10 text-white/50 hover:bg-white/5"
+                    }`}
+                  >
+                    <Icon name={t.icon} size={14} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-white/45 leading-relaxed">
-              Чат-бот для этого блока выбирается в общих настройках лендинга (закройте панель блока) — там же можно подключить сообщество ВКонтакте в разделе «Интеграции».
-            </p>
-          </div>
+
+            {(block.ctaLinkType || "bot") === "bot" && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+                <div className="flex items-center gap-2 text-xs text-white/60 mb-1">
+                  <Icon name="Info" size={13} className="text-aqua" />
+                  Кнопка ведёт в сообщения сообщества
+                </div>
+                <p className="text-xs text-white/45 leading-relaxed">
+                  Чат-бот для этого блока выбирается в общих настройках лендинга (закройте панель блока) — там же можно подключить сообщество ВКонтакте в разделе «Интеграции».
+                </p>
+              </div>
+            )}
+
+            {block.ctaLinkType === "url" && (
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">Ссылка кнопки</label>
+                <input
+                  value={block.ctaLink || ""}
+                  onChange={(e) => onUpdate({ ctaLink: e.target.value })}
+                  placeholder="https://…"
+                  className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+                />
+              </div>
+            )}
+
+            {block.ctaLinkType === "email" && (
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">Email для связи</label>
+                <input
+                  value={block.ctaLink || ""}
+                  onChange={(e) => onUpdate({ ctaLink: e.target.value })}
+                  placeholder="you@mail.ru"
+                  className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+                />
+              </div>
+            )}
+
+            {block.ctaLinkType && block.ctaLinkType !== "bot" && (
+              <div>
+                <label className="text-xs text-white/50 mb-1.5 block">Текст кнопки</label>
+                <input
+                  value={block.ctaText || ""}
+                  onChange={(e) => onUpdate({ ctaText: e.target.value })}
+                  placeholder="Написать в сообщения"
+                  className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+                />
+              </div>
+            )}
+          </>
         )}
 
         {block.type === "email-form" && (

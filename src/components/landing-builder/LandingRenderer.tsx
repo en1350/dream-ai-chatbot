@@ -24,7 +24,8 @@ function resolveCtaLink(block: LandingBlock, vkGroupId?: number | null): { href:
       ? { href: `https://vk.com/gim${vkGroupId}?sel=-${vkGroupId}`, disabled: false, external: true }
       : { href: "#", disabled: true, external: false };
   }
-  return { href: block.ctaLink || "#cta", disabled: false, external: /^https?:\/\//.test(block.ctaLink || "") };
+  const url = (block.ctaLink || "").trim();
+  return { href: url || "#cta", disabled: !url && block.type !== "hero" && block.type !== "cta", external: /^https?:\/\//.test(url) };
 }
 
 export default function LandingRenderer({ blocks, theme, vkGroupId, editable, selectedIndex, onSelectBlock, slug }: Props) {
@@ -153,24 +154,30 @@ export default function LandingRenderer({ blocks, theme, vkGroupId, editable, se
                 </div>
                 <h2 className="font-display text-2xl mb-2">{block.title || "Напишите нам ВКонтакте"}</h2>
                 <p className="text-white/50 mb-6">{block.subtitle || "Ответит бот, а по сложным вопросам подключится менеджер"}</p>
-                {vkGroupId ? (
-                  <a
-                    href={`https://vk.com/gim${vkGroupId}?sel=-${vkGroupId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => editable && e.preventDefault()}
-                    className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-semibold text-ink transition-all hover:brightness-110"
-                    style={{ background: `linear-gradient(to right, ${theme.primaryColor}, ${theme.accentColor})` }}
-                  >
-                    <Icon name="Send" size={18} />
-                    Написать в сообщения
-                  </a>
-                ) : (
-                  <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-sm">
-                    <Icon name="Unplug" size={14} />
-                    Сообщество ВК не подключено
-                  </span>
-                )}
+                {(() => {
+                  const link = resolveCtaLink({ ...block, ctaLinkType: block.ctaLinkType || "bot" }, vkGroupId);
+                  if (link.disabled) {
+                    return (
+                      <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-white/40 text-sm">
+                        <Icon name="Unplug" size={14} />
+                        Сообщество ВК не подключено
+                      </span>
+                    );
+                  }
+                  return (
+                    <a
+                      href={link.href}
+                      target={link.external ? "_blank" : undefined}
+                      rel={link.external ? "noopener noreferrer" : undefined}
+                      onClick={(e) => editable && e.preventDefault()}
+                      className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-semibold text-ink transition-all hover:brightness-110"
+                      style={{ background: `linear-gradient(to right, ${theme.primaryColor}, ${theme.accentColor})` }}
+                    >
+                      <Icon name="Send" size={18} />
+                      {block.ctaText && block.ctaLinkType && block.ctaLinkType !== "bot" ? block.ctaText : "Написать в сообщения"}
+                    </a>
+                  );
+                })()}
               </div>
             </section>
           );

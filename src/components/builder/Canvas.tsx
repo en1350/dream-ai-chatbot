@@ -148,7 +148,17 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
         className="absolute top-0 left-0 origin-top-left"
         style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
       >
-        <svg className="absolute overflow-visible pointer-events-none" style={{ width: 1, height: 1 }}>
+        {/* SVG со связями: некоторые браузеры (особенно Safari/WebKit) некорректно рисуют
+            содержимое SVG размером 1x1px с overflow:visible, если рядом есть абсолютно
+            позиционированные элементы (карточки блоков) — стрелки могут пропадать.
+            Поэтому задаём SVG заведомо большую область, покрывающую холст, вместо расчёта
+            на overflow. */}
+        <svg
+          className="absolute top-0 left-0 pointer-events-none"
+          width={20000}
+          height={20000}
+          style={{ overflow: "visible" }}
+        >
           <defs>
             <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
               <path d="M0,0 L8,4 L0,8 Z" fill="#2B7FFF" />

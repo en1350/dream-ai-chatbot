@@ -61,7 +61,7 @@ export default function Sidebar({ active, onSelect }: Props) {
           <Icon name="Bot" size={22} className="text-ink" />
         </div>
         <span className={`font-display text-xl tracking-wide text-white transition-all ${open ? "opacity-100" : "opacity-0 w-0"}`}>
-          Каскад
+          БотВПотоке
         </span>
       </button>
 

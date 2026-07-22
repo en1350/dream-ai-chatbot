@@ -11,7 +11,7 @@ export default function Footer() {
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-electric to-aqua flex items-center justify-center">
                 <Icon name="Bot" size={20} className="text-ink" />
               </div>
-              <span className="font-display text-xl tracking-wide text-white">Каскад</span>
+              <span className="font-display text-xl tracking-wide text-white">БотВПотоке</span>
             </div>
             <p className="text-sm text-white/50 max-w-xs">
               Платформа для создания чат-ботов ВКонтакте, сбора лидов и запуска лендингов без кода.
@@ -39,7 +39,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t border-white/8 mt-10 pt-6 flex flex-col sm:flex-row justify-between gap-4 text-xs text-white/40">
-          <span>© 2026 Каскад. ИНН 110105729752. Все права защищены.</span>
+          <span>© 2026 БотВПотоке. ИНН 110105729752. Все права защищены.</span>
           <div className="flex gap-6">
             <Link to="/privacy" className="hover:text-white transition-colors">Политика конфиденциальности</Link>
             <Link to="/terms" className="hover:text-white transition-colors">Оферта</Link>

@@ -2,7 +2,6 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import NodeCard from "./NodeCard";
 import { BotNode, BotEdge } from "./types";
-import { NODE_WIDTH, portOffsetX } from "./portUtils";
 
 interface Props {
   nodes: BotNode[];
@@ -37,12 +36,16 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
   const [topPorts, setTopPorts] = useState<Record<string, { x: number; y: number }>>({});
   const [bottomPorts, setBottomPorts] = useState<Record<string, { x: number; y: number }>>({});
 
+  // ВАЖНО: координаты портов измеряются в экранных пикселях относительно контейнера канваса
+  // (БЕЗ деления на scale/pan) — SVG со стрелками рендерится вне трансформированного слоя,
+  // в тех же координатах, что и сам контейнер, поэтому пересчёт через scale здесь не нужен
+  // и является источником ошибок при малейшем рассинхроне.
   const measurePorts = useCallback(() => {
     const canvasRect = ref.current?.getBoundingClientRect();
     if (!canvasRect) return;
     const toLocal = (rect: DOMRect) => ({
-      x: (rect.left + rect.width / 2 - canvasRect.left - pan.x) / scale,
-      y: (rect.top + rect.height / 2 - canvasRect.top - pan.y) / scale,
+      x: rect.left + rect.width / 2 - canvasRect.left,
+      y: rect.top + rect.height / 2 - canvasRect.top,
     });
 
     setTopPorts((prev) => {
@@ -68,7 +71,7 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
       if (!changed && Object.keys(prev).length === Object.keys(next).length) return prev;
       return next;
     });
-  }, [pan, scale]);
+  }, []);
 
   useEffect(() => {
     measurePorts();
@@ -231,110 +234,113 @@ export default function Canvas({ nodes, edges, selectedId, onSelect, onMove, onC
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
     >
+      {/* SVG со связями рендерится ВНЕ трансформированного (pan/scale) слоя, прямо в системе
+          координат контейнера канваса. Координаты портов при этом берутся из реальных
+          экранных позиций элементов (см. measurePorts) — то есть уже с учётом текущих
+          pan/scale, пересчитывать их здесь повторно не нужно. Так исключается расхождение
+          между линией и портом из-за двойного применения трансформации. */}
+      <svg
+        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+        style={{ overflow: "visible" }}
+      >
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#2B7FFF" />
+          </marker>
+          <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#18E0C8" />
+          </marker>
+        </defs>
+        {edges.map((edge) => {
+          const s = nodes.find((n) => n.id === edge.source);
+          const t = nodes.find((n) => n.id === edge.target);
+          if (!s || !t) return null;
+          const bottom = bottomPorts[bottomPortKey(s.id, edge.label)];
+          const top = topPorts[t.id];
+          // Пока порты ещё не измерены (первый кадр после монтирования) — не рисуем связь,
+          // чтобы не показать её в неверном месте (координаты без scale несовместимы с s.x/s.y).
+          if (!bottom || !top) return null;
+          const sx = bottom.x, sy = bottom.y;
+          const tx = top.x, ty = top.y;
+          const midX = (sx + tx) / 2, midY = (sy + ty) / 2;
+          const isSelected = selectedEdgeId === edge.id;
+          const isHovered = hoveredEdgeId === edge.id;
+          const active = isSelected || isHovered;
+          return (
+            <g key={edge.id}>
+              {/* широкая невидимая область для удобного клика/наведения */}
+              <path
+                d={edgePath(sx, sy, tx, ty)}
+                stroke="transparent"
+                strokeWidth={18}
+                fill="none"
+                style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                onClick={(e) => { e.stopPropagation(); setSelectedEdgeId(edge.id); }}
+                onMouseEnter={() => setHoveredEdgeId(edge.id)}
+                onMouseLeave={() => setHoveredEdgeId((h) => (h === edge.id ? null : h))}
+              />
+              <path
+                d={edgePath(sx, sy, tx, ty)}
+                stroke={active ? "#18E0C8" : "#2B7FFF"}
+                strokeWidth={active ? 3 : 2}
+                fill="none"
+                markerEnd={active ? "url(#arrow-active)" : "url(#arrow)"}
+                opacity={active ? 1 : 0.7}
+                style={{ pointerEvents: "none", transition: "stroke 0.15s, stroke-width 0.15s" }}
+              />
+              {edge.label && !active && (
+                <foreignObject x={midX - 50} y={midY - 11} width={100} height={22} style={{ overflow: "visible" }}>
+                  <div className="flex justify-center pointer-events-none">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-ink2 border border-electric/30 text-electric/90 whitespace-nowrap">
+                      {edge.label}
+                    </span>
+                  </div>
+                </foreignObject>
+              )}
+              {active && onDeleteEdge && (
+                <foreignObject x={midX - 11} y={midY - 11} width={22} height={22} style={{ overflow: "visible" }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteEdge(edge.id);
+                      setSelectedEdgeId((sid) => (sid === edge.id ? null : sid));
+                    }}
+                    title="Удалить связь"
+                    style={{ pointerEvents: "auto" }}
+                    className="w-[22px] h-[22px] rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white shadow-lg transition-colors"
+                  >
+                    <Icon name="X" size={12} />
+                  </button>
+                </foreignObject>
+              )}
+            </g>
+          );
+        })}
+        {connectFrom && (() => {
+          const s = nodes.find((n) => n.id === connectFrom.id);
+          if (!s) return null;
+          const bottom = bottomPorts[bottomPortKey(s.id, connectFrom.label)];
+          if (!bottom) return null;
+          // mouse — координаты в мировом пространстве (world), их нужно перевести в экранные,
+          // так как этот SVG больше не находится внутри трансформированного (pan/scale) слоя.
+          const mouseScreenX = mouse.x * scale + pan.x;
+          const mouseScreenY = mouse.y * scale + pan.y;
+          return (
+            <path
+              d={edgePath(bottom.x, bottom.y, mouseScreenX, mouseScreenY)}
+              stroke="#18E0C8"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              fill="none"
+            />
+          );
+        })()}
+      </svg>
+
       <div
         className="absolute top-0 left-0 origin-top-left"
         style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
       >
-        {/* SVG со связями: некоторые браузеры (особенно Safari/WebKit) некорректно рисуют
-            содержимое SVG размером 1x1px с overflow:visible, если рядом есть абсолютно
-            позиционированные элементы (карточки блоков) — стрелки могут пропадать.
-            Поэтому задаём SVG заведомо большую область, покрывающую холст, вместо расчёта
-            на overflow. */}
-        <svg
-          className="absolute top-0 left-0 pointer-events-none"
-          width={20000}
-          height={20000}
-          style={{ overflow: "visible" }}
-        >
-          <defs>
-            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-              <path d="M0,0 L8,4 L0,8 Z" fill="#2B7FFF" />
-            </marker>
-            <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
-              <path d="M0,0 L8,4 L0,8 Z" fill="#18E0C8" />
-            </marker>
-          </defs>
-          {edges.map((edge) => {
-            const s = nodes.find((n) => n.id === edge.source);
-            const t = nodes.find((n) => n.id === edge.target);
-            if (!s || !t) return null;
-            const bottom = bottomPorts[bottomPortKey(s.id, edge.label)];
-            const top = topPorts[t.id];
-            // Пока порты ещё не измерены (первый кадр после монтирования) — считаем по геометрии,
-            // чтобы стрелка не "прыгала" из нулевой точки.
-            const sx = bottom?.x ?? s.x + portOffsetX(s, edge.label), sy = bottom?.y ?? s.y + 88;
-            const tx = top?.x ?? t.x + NODE_WIDTH / 2, ty = top?.y ?? t.y;
-            const midX = (sx + tx) / 2, midY = (sy + ty) / 2;
-            const isSelected = selectedEdgeId === edge.id;
-            const isHovered = hoveredEdgeId === edge.id;
-            const active = isSelected || isHovered;
-            return (
-              <g key={edge.id}>
-                {/* широкая невидимая область для удобного клика/наведения */}
-                <path
-                  d={edgePath(sx, sy, tx, ty)}
-                  stroke="transparent"
-                  strokeWidth={18}
-                  fill="none"
-                  style={{ pointerEvents: "stroke", cursor: "pointer" }}
-                  onClick={(e) => { e.stopPropagation(); setSelectedEdgeId(edge.id); }}
-                  onMouseEnter={() => setHoveredEdgeId(edge.id)}
-                  onMouseLeave={() => setHoveredEdgeId((h) => (h === edge.id ? null : h))}
-                />
-                <path
-                  d={edgePath(sx, sy, tx, ty)}
-                  stroke={active ? "#18E0C8" : "#2B7FFF"}
-                  strokeWidth={active ? 3 : 2}
-                  fill="none"
-                  markerEnd={active ? "url(#arrow-active)" : "url(#arrow)"}
-                  opacity={active ? 1 : 0.7}
-                  style={{ pointerEvents: "none", transition: "stroke 0.15s, stroke-width 0.15s" }}
-                />
-                {edge.label && !active && (
-                  <foreignObject x={midX - 50} y={midY - 11} width={100} height={22} style={{ overflow: "visible" }}>
-                    <div className="flex justify-center pointer-events-none">
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-ink2 border border-electric/30 text-electric/90 whitespace-nowrap">
-                        {edge.label}
-                      </span>
-                    </div>
-                  </foreignObject>
-                )}
-                {active && onDeleteEdge && (
-                  <foreignObject x={midX - 11} y={midY - 11} width={22} height={22} style={{ overflow: "visible" }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteEdge(edge.id);
-                        setSelectedEdgeId((sid) => (sid === edge.id ? null : sid));
-                      }}
-                      title="Удалить связь"
-                      style={{ pointerEvents: "auto" }}
-                      className="w-[22px] h-[22px] rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white shadow-lg transition-colors"
-                    >
-                      <Icon name="X" size={12} />
-                    </button>
-                  </foreignObject>
-                )}
-              </g>
-            );
-          })}
-          {connectFrom && (() => {
-            const s = nodes.find((n) => n.id === connectFrom.id);
-            if (!s) return null;
-            const bottom = bottomPorts[bottomPortKey(s.id, connectFrom.label)];
-            const sx = bottom?.x ?? s.x + portOffsetX(s, connectFrom.label), sy = bottom?.y ?? s.y + 88;
-            return (
-              <path
-                d={edgePath(sx, sy, mouse.x, mouse.y)}
-                stroke="#18E0C8"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-                fill="none"
-              />
-            );
-          })()}
-        </svg>
-
         {nodes.map((n) => (
           <NodeCard
             key={n.id}

@@ -138,17 +138,21 @@ def handler(event: dict, context) -> dict:
                 return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "id is required"})}
             landing_id = int(landing_id)
 
-            cur.execute(f"SELECT id, slug FROM {SCHEMA}.landings WHERE id = {landing_id} AND user_id = {DEFAULT_USER_ID}")
+            cur.execute(
+                f"""SELECT id, name, slug, blocks, theme, published, bot_id
+                    FROM {SCHEMA}.landings WHERE id = {landing_id} AND user_id = {DEFAULT_USER_ID}"""
+            )
             existing = cur.fetchone()
             if not existing:
                 return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Landing not found"})}
 
-            name = (body.get("name") or "Мой лендинг").strip()[:200]
-            blocks = json.dumps(body.get("blocks") or [])
-            theme = json.dumps(body.get("theme") or {})
-            published = bool(body.get("published", False))
+            name = (body.get("name") if "name" in body else existing[1]) or "Мой лендинг"
+            name = name.strip()[:200]
+            blocks = json.dumps(body.get("blocks") if "blocks" in body else existing[3])
+            theme = json.dumps(body.get("theme") if "theme" in body else existing[4])
+            published = bool(body.get("published", existing[5]))
 
-            slug = existing[1]
+            slug = existing[2]
             if body.get("slug"):
                 new_slug = slugify(body.get("slug"))
                 if new_slug != slug:
@@ -156,7 +160,7 @@ def handler(event: dict, context) -> dict:
                     if not cur.fetchone():
                         slug = new_slug
 
-            bot_id = body.get("botId")
+            bot_id = body.get("botId") if "botId" in body else existing[6]
             bot_id_sql = int(bot_id) if bot_id else "NULL"
 
             cur.execute(

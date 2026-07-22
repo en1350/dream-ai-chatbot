@@ -14,8 +14,6 @@ interface Props {
   onFinishConnect: () => void;
   onDelete: () => void;
   cardRef?: (el: HTMLDivElement | null) => void;
-  topPortRef?: (el: HTMLDivElement | null) => void;
-  bottomPortRef?: (label: string | undefined, el: HTMLDivElement | null) => void;
 }
 
 export default function NodeCard({
@@ -28,8 +26,6 @@ export default function NodeCard({
   onFinishConnect,
   onDelete,
   cardRef,
-  topPortRef,
-  bottomPortRef,
 }: Props) {
   const def = NODE_DEF_MAP[node.subtype];
   const meta = CATEGORY_META[node.category];
@@ -53,7 +49,6 @@ export default function NodeCard({
       >
         {/* top port */}
         <div
-          ref={topPortRef}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => { e.stopPropagation(); onFinishConnect(); }}
           onPointerUp={(e) => { e.stopPropagation(); onFinishConnect(); }}
@@ -131,7 +126,6 @@ export default function NodeCard({
         {ports.map((label, i) => (
           <div
             key={i}
-            ref={bottomPortRef ? (el) => bottomPortRef(label, el) : undefined}
             onPointerDown={(e) => { e.stopPropagation(); onStartConnect(label, e); }}
             title={label ? `Тяните, чтобы соединить ветку «${label}»` : "Тяните, чтобы соединить с другим блоком"}
             className="absolute -bottom-[7px] w-3.5 h-3.5 rounded-full border-2 border-ink2 cursor-crosshair hover:scale-125 transition-transform z-10"

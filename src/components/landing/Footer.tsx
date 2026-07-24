@@ -38,7 +38,27 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/8 mt-10 pt-6 flex flex-col sm:flex-row justify-between gap-4 text-xs text-white/40">
+        <div className="border-t border-white/8 mt-10 pt-6 flex flex-col sm:flex-row gap-3">
+          <div className="flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 sm:flex-1">
+            <Icon name="ShieldCheck" size={18} className="text-aqua shrink-0 mt-0.5" />
+            <div>
+              <div className="text-sm text-white font-medium">Соответствие № 152-ФЗ</div>
+              <p className="text-xs text-white/50 mt-0.5">
+                Обработка и защита персональных данных пользователей в соответствии с Федеральным законом «О персональных данных».
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-3 sm:flex-1">
+            <Icon name="FileCheck" size={18} className="text-aqua shrink-0 mt-0.5" />
+            <div>
+              <div className="text-sm text-white font-medium">Соответствие № 149-ФЗ</div>
+              <p className="text-xs text-white/50 mt-0.5">
+                Работа с информацией и информационными технологиями согласно Федеральному закону «Об информации, информационных технологиях и о защите информации».
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-white/8 mt-6 pt-6 flex flex-col sm:flex-row justify-between gap-4 text-xs text-white/40">
           <span>© 2026 БотВПотоке. ИНН 110105729752. Все права защищены.</span>
           <div className="flex gap-6">
             <Link to="/privacy" className="hover:text-white transition-colors">Политика конфиденциальности</Link>

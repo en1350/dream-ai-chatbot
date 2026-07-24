@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import Icon from "@/components/ui/icon";
 
 interface Props {
@@ -21,7 +22,10 @@ export default function ContentModal({ open, onClose, children }: Props) {
 
   if (!open) return null;
 
-  return (
+  // Рендерим в body через портал: иначе родитель с backdrop-blur создаёт
+  // содержащий блок для position:fixed, и окно позиционируется относительно
+  // полосы кнопок, а не всего экрана.
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 sm:p-8 animate-fade-up"
       onClick={onClose}
@@ -36,6 +40,7 @@ export default function ContentModal({ open, onClose, children }: Props) {
         </button>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

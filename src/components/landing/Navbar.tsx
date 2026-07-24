@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const links = [
   { label: "Возможности", href: "#features" },
@@ -26,6 +27,7 @@ export default function Navbar() {
           ))}
         </nav>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link to="/dashboard" className="hidden sm:block text-sm text-white/70 hover:text-white transition-colors">
             Войти
           </Link>

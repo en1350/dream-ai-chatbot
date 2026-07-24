@@ -3,29 +3,87 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Тёмная тема (по умолчанию) */
+    --ink: #070b1a;
+    --ink2: #0d1430;
+    /* Базовые тона текста/границ, которые в светлой теме инвертируются.
+       Компоненты используют text-white/border-white — ниже мы переопределяем
+       их через семантические правила для .theme-light. */
+    --on-ink: 255 255 255; /* rgb белого текста на тёмном фоне */
+    --grain-1: rgba(43, 127, 255, 0.14);
+    --grain-2: rgba(24, 224, 200, 0.12);
+    --grid-line: rgba(255, 255, 255, 0.04);
+  }
+
+  .theme-light {
+    --ink: #f4f6fb;
+    --ink2: #ffffff;
+    --on-ink: 17 24 51; /* тёмный текст (#111833) на светлом фоне */
+    --grain-1: rgba(43, 127, 255, 0.1);
+    --grain-2: rgba(24, 224, 200, 0.1);
+    --grid-line: rgba(17, 24, 51, 0.05);
+  }
+
   body {
     font-family: "Golos Text", sans-serif;
-    background: #070b1a;
+    background: var(--ink);
   }
   .grain-bg {
     background-image:
-      radial-gradient(
-        circle at 20% 20%,
-        rgba(43, 127, 255, 0.14),
-        transparent 40%
-      ),
-      radial-gradient(
-        circle at 80% 60%,
-        rgba(24, 224, 200, 0.12),
-        transparent 45%
-      );
+      radial-gradient(circle at 20% 20%, var(--grain-1), transparent 40%),
+      radial-gradient(circle at 80% 60%, var(--grain-2), transparent 45%);
   }
   .grid-overlay {
     background-image:
-      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
     background-size: 46px 46px;
   }
+}
+
+/* Светлая тема: переопределяем «вшитые» тёмные утилиты, чтобы не менять
+   классы в сотнях компонентов. text-white и border-white становятся
+   тёмными (через --on-ink), сохраняя прозрачность. */
+@layer utilities {
+  /* Текст: белый -> тёмный, с сохранением исходной прозрачности (иерархия).
+     В Tailwind 3 слэш-опасити компилируется в готовое rgb() без переменной,
+     поэтому задаём каждую используемую ступень явно. */
+  .theme-light .text-white { color: rgb(var(--on-ink)); }
+  .theme-light .text-white\/90 { color: rgb(var(--on-ink) / 0.9); }
+  .theme-light .text-white\/80 { color: rgb(var(--on-ink) / 0.8); }
+  .theme-light .text-white\/75 { color: rgb(var(--on-ink) / 0.78); }
+  .theme-light .text-white\/70 { color: rgb(var(--on-ink) / 0.72); }
+  .theme-light .text-white\/60 { color: rgb(var(--on-ink) / 0.64); }
+  .theme-light .text-white\/55 { color: rgb(var(--on-ink) / 0.6); }
+  .theme-light .text-white\/50 { color: rgb(var(--on-ink) / 0.55); }
+  .theme-light .text-white\/45 { color: rgb(var(--on-ink) / 0.52); }
+  .theme-light .text-white\/40 { color: rgb(var(--on-ink) / 0.48); }
+  .theme-light .text-white\/35 { color: rgb(var(--on-ink) / 0.44); }
+  .theme-light .text-white\/30 { color: rgb(var(--on-ink) / 0.4); }
+  .theme-light .text-white\/25 { color: rgb(var(--on-ink) / 0.36); }
+  .theme-light .text-white\/20 { color: rgb(var(--on-ink) / 0.32); }
+  .theme-light .text-white\/15 { color: rgb(var(--on-ink) / 0.28); }
+  .theme-light .text-white\/10 { color: rgb(var(--on-ink) / 0.22); }
+
+  /* Границы: белые -> тёмные, приглушённые. */
+  .theme-light .border-white { border-color: rgb(var(--on-ink) / 0.18); }
+  .theme-light .border-white\/25 { border-color: rgb(var(--on-ink) / 0.16); }
+  .theme-light .border-white\/20 { border-color: rgb(var(--on-ink) / 0.14); }
+  .theme-light .border-white\/15 { border-color: rgb(var(--on-ink) / 0.12); }
+  .theme-light .border-white\/10 { border-color: rgb(var(--on-ink) / 0.1); }
+  .theme-light .border-white\/8 { border-color: rgb(var(--on-ink) / 0.08); }
+  .theme-light .border-white\/5 { border-color: rgb(var(--on-ink) / 0.07); }
+
+  /* Полупрозрачные белые подложки -> мягкие серые карточки на светлом фоне. */
+  .theme-light [class*="bg-white/"] { background-color: rgb(var(--on-ink) / 0.04); }
+  .theme-light .bg-white\/5,
+  .theme-light .bg-white\/8 { background-color: rgb(var(--on-ink) / 0.04); }
+  .theme-light .bg-white\/10,
+  .theme-light .bg-white\/15 { background-color: rgb(var(--on-ink) / 0.07); }
+  /* Сплошные белые кнопки-инверсии (bg-white text-ink): делаем тёмными,
+     текст text-ink при этом светлый (--ink) — контраст сохраняется. */
+  .theme-light .bg-white:not([class*="bg-white/"]) { background-color: rgb(var(--on-ink)); }
 }
 
 @layer base {

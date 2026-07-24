@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
+import { useTheme } from "@/contexts/ThemeContext";
 import func2url from "../../../backend/func2url.json";
 
 const nav = [
@@ -27,6 +28,7 @@ interface Props {
 export default function Sidebar({ active, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [planName, setPlanName] = useState("…");
+  const { theme, toggleTheme } = useTheme();
   const nav2 = useNavigate();
 
   useEffect(() => {
@@ -80,6 +82,15 @@ export default function Sidebar({ active, onSelect }: Props) {
           <Icon name="HelpCircle" size={20} />
           <span className={`text-sm whitespace-nowrap transition-all ${open ? "opacity-100" : "opacity-0 w-0"}`}>
             Справка
+          </span>
+        </button>
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-3 w-full h-11 px-3.5 rounded-xl text-white/55 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <Icon name={theme === "dark" ? "Sun" : "Moon"} size={20} />
+          <span className={`text-sm whitespace-nowrap transition-all ${open ? "opacity-100" : "opacity-0 w-0"}`}>
+            {theme === "dark" ? "Светлая тема" : "Тёмная тема"}
           </span>
         </button>
       </nav>

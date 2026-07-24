@@ -25,8 +25,8 @@ export default {
 			colors: {
 				electric: '#2B7FFF',
 				aqua: '#18E0C8',
-				ink: '#070B1A',
-				ink2: '#0D1430',
+				ink: 'var(--ink)',
+				ink2: 'var(--ink2)',
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',

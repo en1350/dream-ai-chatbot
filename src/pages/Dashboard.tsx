@@ -6,6 +6,7 @@ import LandingsList from "@/components/dashboard/LandingsList";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import LeadsList from "@/components/dashboard/LeadsList";
 import BillingPanel from "@/components/dashboard/BillingPanel";
+import WalletPanel from "@/components/dashboard/WalletPanel";
 import Icon from "@/components/ui/icon";
 
 const stubs: Record<string, { title: string; icon: string; text: string }> = {
@@ -35,6 +36,8 @@ const Dashboard = () => {
             <LeadsList />
           ) : active === "billing" ? (
             <BillingPanel />
+          ) : active === "wallet" ? (
+            <WalletPanel />
           ) : (
             <div className="flex flex-col items-center justify-center text-center py-32">
               <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-5">

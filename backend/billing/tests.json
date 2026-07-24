@@ -1,11 +1,28 @@
 {
   "tests": [
     {
-      "name": "Получить текущий тариф и лимиты",
+      "name": "Получить тариф, лимиты и баланс",
       "method": "GET",
       "path": "/",
       "expectedStatus": 200,
-      "expectedBody": {"planId": "string", "planName": "string"},
+      "expectedBody": {"planId": "string", "planName": "string", "balanceKopecks": 0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Активировать бесплатный демо-тариф",
+      "method": "PUT",
+      "path": "/",
+      "body": {"plan": "demo"},
+      "expectedStatus": 200,
+      "expectedBody": {"success": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Некорректный тариф — ошибка",
+      "method": "PUT",
+      "path": "/",
+      "body": {"plan": "unknown"},
+      "expectedStatus": 400,
       "bodyMatcher": "partial"
     }
   ]

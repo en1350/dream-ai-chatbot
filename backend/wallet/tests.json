@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Баланс и транзакции",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"balanceKopecks": 0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Пополнение меньше минимума — ошибка",
+      "method": "POST",
+      "path": "/",
+      "body": {"action": "topup", "amountKopecks": 100},
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Webhook без данных платежа — ok",
+      "method": "POST",
+      "path": "/",
+      "body": {"event": "payment.succeeded", "object": {}},
+      "expectedStatus": 200,
+      "expectedBody": {"ok": true},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

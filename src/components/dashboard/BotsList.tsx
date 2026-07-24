@@ -24,6 +24,8 @@ export default function BotsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [maxBots, setMaxBots] = useState<number | null>(null);
+  const [planName, setPlanName] = useState("");
 
   useEffect(() => {
     fetch(func2url["bots"])
@@ -41,7 +43,16 @@ export default function BotsList() {
     fetch(func2url["landings"])
       .then((res) => res.json())
       .then((data) => setLandings(data.landings || []));
+
+    fetch(func2url["billing"])
+      .then((res) => res.json())
+      .then((data) => {
+        setMaxBots(data.usage?.bots?.max ?? null);
+        setPlanName(data.planName || "");
+      });
   }, []);
+
+  const overLimit = maxBots !== null && bots.length >= maxBots;
 
   const landingForBot = (botId: number) => landings.find((l) => l.botId === botId);
 
@@ -84,9 +95,22 @@ export default function BotsList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="font-display text-3xl text-white">Мои боты</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-3xl text-white">Мои боты</h1>
+            {!loading && (
+              <span
+                className={`text-xs px-2.5 py-1 rounded-full border ${
+                  overLimit
+                    ? "bg-amber-400/15 text-amber-400 border-amber-400/25"
+                    : "bg-white/5 text-white/50 border-white/10"
+                }`}
+              >
+                {bots.length}/{maxBots === null ? "∞" : maxBots} ботов
+              </span>
+            )}
+          </div>
           <p className="text-white/50 text-sm mt-1">Выберите бота, чтобы открыть конструктор</p>
         </div>
         <button
@@ -96,6 +120,16 @@ export default function BotsList() {
           <Icon name="Plus" size={18} /> Новый бот
         </button>
       </div>
+
+      {!loading && overLimit && (
+        <div className="flex items-start gap-2.5 mb-6 px-4 py-3 rounded-xl bg-amber-400/10 border border-amber-400/25 text-amber-300 text-sm">
+          <Icon name="TriangleAlert" size={16} className="shrink-0 mt-0.5" />
+          <span>
+            Достигнут лимит тарифа «{planName}» — {maxBots} {maxBots === 1 ? "бот" : "ботов"}. Вы можете создать больше ботов,
+            повысив тариф в разделе «Тарифы».
+          </span>
+        </div>
+      )}
 
       {loading && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -13,8 +13,9 @@ const nav = [
 ];
 
 const bottom = [
-  { id: "team", label: "Команда", icon: "Users" },
+  { id: "wallet", label: "Кошелёк", icon: "Wallet" },
   { id: "billing", label: "Тарифы", icon: "CreditCard" },
+  { id: "team", label: "Команда", icon: "Users" },
   { id: "settings", label: "Настройки", icon: "Settings" },
 ];
 
@@ -31,7 +32,7 @@ export default function Sidebar({ active, onSelect }: Props) {
   useEffect(() => {
     fetch(func2url["billing"])
       .then((res) => res.json())
-      .then((data) => setPlanName(data.planName || "Старт"));
+      .then((data) => setPlanName(data.planName || "Демо"));
   }, []);
 
   const Item = ({ item }: { item: { id: string; label: string; icon: string } }) => (

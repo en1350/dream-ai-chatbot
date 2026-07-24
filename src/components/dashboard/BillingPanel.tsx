@@ -5,33 +5,41 @@ import func2url from "../../../backend/func2url.json";
 interface Billing {
   planId: string;
   planName: string;
+  balanceKopecks: number;
+  planExpiresAt: string | null;
+  demoDaysLeft: number | null;
   usage: {
     bots: { current: number; max: number | null };
     dialogs: { current: number; max: number | null };
   };
 }
 
+const rub = (kopecks: number) => (kopecks / 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+
 const PLAN_CARDS = [
   {
-    id: "start",
-    name: "Старт",
+    id: "demo",
+    name: "Демо",
     price: "0 ₽",
-    period: "навсегда",
-    features: ["1 бот", "100 диалогов в месяц", "Сбор лидов", "Интеграция ВК"],
+    period: "7 дней бесплатно",
+    priceKopecks: 0,
+    features: ["1 бот", "100 диалогов", "Сбор лидов", "Интеграция ВК", "Без карты"],
   },
   {
-    id: "business",
-    name: "Бизнес",
+    id: "standard",
+    name: "Стандарт",
     price: "390 ₽",
     period: "в месяц",
-    features: ["5 ботов", "Безлимит диалогов", "AI-ответы", "Лендинги", "Интеграция ВК"],
+    priceKopecks: 39000,
+    features: ["5 ботов", "500 диалогов", "AI-ответы", "Лендинги", "Интеграция ВК"],
     accent: true,
   },
   {
-    id: "agency",
-    name: "Агентство",
+    id: "pro",
+    name: "Профи",
     price: "990 ₽",
     period: "в месяц",
+    priceKopecks: 99000,
     features: ["Безлимит ботов", "Приоритетная поддержка", "Лендинги", "Интеграция ВК"],
   },
 ];
@@ -40,6 +48,7 @@ export default function BillingPanel() {
   const [billing, setBilling] = useState<Billing | null>(null);
   const [loading, setLoading] = useState(true);
   const [switching, setSwitching] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   const load = () => {
     fetch(func2url["billing"])
@@ -54,22 +63,47 @@ export default function BillingPanel() {
 
   const choosePlan = (planId: string) => {
     setSwitching(planId);
+    setError("");
     fetch(func2url["billing"], {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan: planId }),
     })
-      .then((res) => res.json())
-      .then(() => load())
+      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          setError(data.error || "Не удалось сменить тариф");
+        } else {
+          load();
+        }
+      })
+      .catch(() => setError("Не удалось сменить тариф"))
       .finally(() => setSwitching(null));
   };
 
+  const balance = billing?.balanceKopecks ?? 0;
+
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="font-display text-3xl text-white">Тарифы и биллинг</h1>
-        <p className="text-white/50 text-sm mt-1">Ваш план и лимиты использования</p>
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="font-display text-3xl text-white">Тарифы и биллинг</h1>
+          <p className="text-white/50 text-sm mt-1">Ваш план и лимиты использования</p>
+        </div>
+        <div className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-ink2/50 px-4 py-2.5">
+          <Icon name="Wallet" size={18} className="text-aqua" />
+          <div>
+            <p className="text-[11px] text-white/40 leading-none mb-0.5">Баланс кошелька</p>
+            <p className="text-white font-semibold leading-none">{rub(balance)} ₽</p>
+          </div>
+        </div>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-2 mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">
+          <Icon name="TriangleAlert" size={15} /> {error}
+        </div>
+      )}
 
       {!loading && billing && (
         <div className="rounded-2xl border border-white/8 bg-ink2/50 p-6 mb-8">
@@ -78,6 +112,11 @@ export default function BillingPanel() {
               <p className="text-xs text-white/40 mb-1">Текущий тариф</p>
               <h3 className="text-white font-semibold text-lg">{billing.planName}</h3>
             </div>
+            {billing.demoDaysLeft !== null && (
+              <span className="text-xs px-3 py-1.5 rounded-full bg-amber-400/15 text-amber-400 border border-amber-400/25">
+                Осталось дней демо: {billing.demoDaysLeft}
+              </span>
+            )}
           </div>
           <div className="grid sm:grid-cols-2 gap-6">
             {[
@@ -85,7 +124,7 @@ export default function BillingPanel() {
               { label: "Диалоги", cur: billing.usage.dialogs.current, max: billing.usage.dialogs.max },
             ].map((l) => {
               const unlimited = l.max === null;
-              const pct = !unlimited && l.max > 0 ? Math.round((l.cur / l.max) * 100) : 0;
+              const pct = !unlimited && l.max! > 0 ? Math.round((l.cur / l.max!) * 100) : 0;
               return (
                 <div key={l.label}>
                   <div className="flex justify-between text-sm mb-1.5">
@@ -97,7 +136,7 @@ export default function BillingPanel() {
                   <div className="h-2 rounded-full bg-white/8 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-electric to-aqua"
-                      style={{ width: `${unlimited ? 100 : pct}%` }}
+                      style={{ width: `${unlimited ? 100 : Math.min(100, pct)}%` }}
                     />
                   </div>
                 </div>
@@ -110,6 +149,8 @@ export default function BillingPanel() {
       <div className="grid md:grid-cols-3 gap-6">
         {PLAN_CARDS.map((p) => {
           const isCurrent = billing?.planId === p.id;
+          const notEnough = p.priceKopecks > 0 && balance < p.priceKopecks;
+          const isPaid = p.priceKopecks > 0;
           return (
             <div
               key={p.id}
@@ -138,18 +179,33 @@ export default function BillingPanel() {
                 ))}
               </ul>
               <button
-                disabled={isCurrent || switching === p.id}
+                disabled={isCurrent || switching === p.id || notEnough}
                 onClick={() => choosePlan(p.id)}
                 className={`w-full text-center py-3 rounded-full font-medium transition-all disabled:cursor-default ${
                   isCurrent
                     ? "border border-aqua/40 text-aqua"
+                    : notEnough
+                    ? "border border-white/10 text-white/40"
                     : p.accent
                     ? "bg-gradient-to-r from-electric to-aqua text-ink hover:shadow-[0_0_30px_rgba(43,127,255,0.5)]"
                     : "border border-white/15 text-white hover:bg-white/5"
                 }`}
               >
-                {isCurrent ? "Текущий тариф" : switching === p.id ? "Переключаем…" : "Выбрать тариф"}
+                {isCurrent
+                  ? "Текущий тариф"
+                  : switching === p.id
+                  ? "Оплачиваем…"
+                  : notEnough
+                  ? "Недостаточно средств"
+                  : isPaid
+                  ? `Оплатить ${p.price}`
+                  : "Активировать"}
               </button>
+              {notEnough && !isCurrent && (
+                <p className="text-[11px] text-white/40 text-center mt-2">
+                  Пополните кошелёк на {rub(p.priceKopecks - balance)} ₽
+                </p>
+              )}
             </div>
           );
         })}

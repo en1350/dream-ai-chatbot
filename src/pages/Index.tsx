@@ -2,6 +2,7 @@ import Navbar from "@/components/landing/Navbar";
 import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import HowItWorks from "@/components/landing/HowItWorks";
+import WisdomMinute from "@/components/landing/WisdomMinute";
 import Pricing from "@/components/landing/Pricing";
 import Faq from "@/components/landing/Faq";
 import AuthSection from "@/components/landing/AuthSection";
@@ -15,6 +16,7 @@ const Index = () => {
         <Hero />
         <Features />
         <HowItWorks />
+        <WisdomMinute />
         <Pricing />
         <Faq />
         <AuthSection />

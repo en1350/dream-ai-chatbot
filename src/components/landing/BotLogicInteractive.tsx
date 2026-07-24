@@ -77,7 +77,12 @@ const QUIZ: QuizQuestion[] = [
   },
 ];
 
-export default function BotLogicInteractive() {
+interface Props {
+  // embedded — рендер внутри модалки: без внешней секции-обёртки с отступами.
+  embedded?: boolean;
+}
+
+export default function BotLogicInteractive({ embedded = false }: Props) {
   const [tab, setTab] = useState(0);
 
   // Симулятор
@@ -118,23 +123,21 @@ export default function BotLogicInteractive() {
     color: state === "idle" ? C.text : "#fff",
   });
 
-  return (
-    <section className="py-24 relative" style={{ background: "transparent" }}>
-      <div className="container mx-auto px-6">
-        <div
-          style={{
-            maxWidth: 900,
-            margin: "0 auto",
-            background: C.card,
-            borderRadius: 16,
-            boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-            overflow: "hidden",
-            color: C.text,
-            fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-            lineHeight: 1.6,
-          }}
-        >
-          {/* Header */}
+  const card = (
+    <div
+      style={{
+        maxWidth: 900,
+        margin: "0 auto",
+        background: C.card,
+        borderRadius: 16,
+        boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+        overflow: "hidden",
+        color: C.text,
+        fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        lineHeight: 1.6,
+      }}
+    >
+      {/* Header */}
           <div
             style={{
               background: `linear-gradient(135deg, ${C.primary} 0%, ${C.secondary} 100%)`,
@@ -442,7 +445,13 @@ export default function BotLogicInteractive() {
             )}
           </div>
         </div>
-      </div>
+  );
+
+  if (embedded) return card;
+
+  return (
+    <section className="py-24 relative" style={{ background: "transparent" }}>
+      <div className="container mx-auto px-6">{card}</div>
     </section>
   );
 }

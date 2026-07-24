@@ -9,7 +9,7 @@ const chat = [
 
 export default function Hero() {
   return (
-    <section className="relative pt-36 pb-24 overflow-hidden grain-bg">
+    <section className="relative pt-16 pb-24 overflow-hidden grain-bg">
       <div className="absolute inset-0 grid-overlay opacity-60" />
       <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[680px] h-[680px] rounded-full bg-electric/20 blur-[130px] animate-glow" />
       <div className="container mx-auto px-6 relative">

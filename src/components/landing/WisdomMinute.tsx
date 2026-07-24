@@ -43,55 +43,65 @@ function dayIndex(): number {
   return dayNumber % QUOTES.length;
 }
 
-export default function WisdomMinute() {
-  const [revealed, setRevealed] = useState(false);
+interface Props {
+  // embedded — компонент показывается внутри модалки: без внешней секции-отступа
+  // и сразу с цитатой дня (без кнопки-раскрытия).
+  embedded?: boolean;
+}
+
+export default function WisdomMinute({ embedded = false }: Props) {
+  const [revealed, setRevealed] = useState(embedded);
   const quote = QUOTES[dayIndex()];
+
+  const card = (
+    <div className="relative max-w-4xl mx-auto rounded-3xl border border-electric/20 bg-gradient-to-b from-electric/10 to-ink2/60 p-10 md:p-14 overflow-hidden">
+      <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-aqua/10 blur-3xl" />
+      <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-electric/10 blur-3xl" />
+
+      <div className="relative flex flex-col items-center text-center">
+        <div className="flex items-center gap-2 text-aqua text-sm font-medium tracking-widest uppercase mb-6">
+          <Icon name="Sparkles" size={16} />
+          Мудрая минутка
+        </div>
+
+        {!revealed ? (
+          <>
+            <h2 className="font-display text-3xl md:text-4xl text-white leading-tight mb-4">
+              Мысль дня для вашего бизнеса
+            </h2>
+            <p className="text-white/55 max-w-lg mb-8">
+              Каждый день — одна короткая мысль о логике, продажах и росте. Нажмите, чтобы открыть сегодняшнюю.
+            </p>
+            <button
+              onClick={() => setRevealed(true)}
+              className="group inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-gradient-to-r from-electric to-aqua text-ink font-semibold hover:shadow-[0_0_35px_rgba(43,127,255,0.45)] transition-all"
+            >
+              <Icon name="Lightbulb" size={19} />
+              Мудрая минутка
+              <Icon name="ArrowRight" size={18} className="group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </>
+        ) : (
+          <div className="animate-fade-up flex flex-col items-center">
+            <Icon name="Quote" size={34} className="text-electric mb-5" />
+            <blockquote className="font-display text-2xl md:text-3xl text-white leading-snug max-w-3xl mb-8">
+              {quote}
+            </blockquote>
+            <div className="flex items-center gap-2 text-white/40 text-sm">
+              <Icon name="CalendarDays" size={15} />
+              Мысль на сегодня
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (embedded) return card;
 
   return (
     <section className="py-24 relative">
-      <div className="container mx-auto px-6">
-        <div className="relative max-w-4xl mx-auto rounded-3xl border border-electric/20 bg-gradient-to-b from-electric/10 to-ink2/60 p-10 md:p-14 overflow-hidden">
-          <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-aqua/10 blur-3xl" />
-          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-electric/10 blur-3xl" />
-
-          <div className="relative flex flex-col items-center text-center">
-            <div className="flex items-center gap-2 text-aqua text-sm font-medium tracking-widest uppercase mb-6">
-              <Icon name="Sparkles" size={16} />
-              Мудрая минутка
-            </div>
-
-            {!revealed ? (
-              <>
-                <h2 className="font-display text-3xl md:text-4xl text-white leading-tight mb-4">
-                  Мысль дня для вашего бизнеса
-                </h2>
-                <p className="text-white/55 max-w-lg mb-8">
-                  Каждый день — одна короткая мысль о логике, продажах и росте. Нажмите, чтобы открыть сегодняшнюю.
-                </p>
-                <button
-                  onClick={() => setRevealed(true)}
-                  className="group inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-gradient-to-r from-electric to-aqua text-ink font-semibold hover:shadow-[0_0_35px_rgba(43,127,255,0.45)] transition-all"
-                >
-                  <Icon name="Lightbulb" size={19} />
-                  Мудрая минутка
-                  <Icon name="ArrowRight" size={18} className="group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              </>
-            ) : (
-              <div className="animate-fade-up flex flex-col items-center">
-                <Icon name="Quote" size={34} className="text-electric mb-5" />
-                <blockquote className="font-display text-2xl md:text-3xl text-white leading-snug max-w-3xl mb-8">
-                  {quote}
-                </blockquote>
-                <div className="flex items-center gap-2 text-white/40 text-sm">
-                  <Icon name="CalendarDays" size={15} />
-                  Мысль на сегодня
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <div className="container mx-auto px-6">{card}</div>
     </section>
   );
 }

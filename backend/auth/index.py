@@ -5,6 +5,7 @@ import secrets
 import re
 import urllib.request
 import urllib.parse
+import urllib.error
 
 import psycopg2
 
@@ -92,8 +93,13 @@ def send_reset_email(to_email: str, name: str, reset_url: str) -> bool:
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as r:
+            print(f"[smtp.bz] status={r.status} body={r.read(500)}")
             return 200 <= r.status < 300
-    except Exception:
+    except urllib.error.HTTPError as e:
+        print(f"[smtp.bz] HTTPError status={e.code} body={e.read(500)}")
+        return False
+    except Exception as e:
+        print(f"[smtp.bz] error: {e}")
         return False
 
 

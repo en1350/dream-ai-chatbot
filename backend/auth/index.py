@@ -14,7 +14,7 @@ SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
 PLANS = {"start", "pro"}
 
 SMTPBZ_API_KEY = os.environ.get("SMTPBZ_API_KEY", "")
-MAIL_FROM = os.environ.get("MAIL_FROM", "en1350@rambler.ru")
+MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@bot-flow.ru")
 MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "БотВПотоке")
 
 CORS = {

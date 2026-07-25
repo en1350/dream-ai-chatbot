@@ -4,6 +4,7 @@ import hashlib
 import secrets
 import re
 import urllib.request
+import urllib.parse
 
 import psycopg2
 
@@ -11,8 +12,9 @@ SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
 
 PLANS = {"start", "pro"}
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-MAIL_FROM = os.environ.get("MAIL_FROM", "БотВПотоке <onboarding@resend.dev>")
+SMTPBZ_API_KEY = os.environ.get("SMTPBZ_API_KEY", "")
+MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@bot-flow.ru")
+MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "БотВПотоке")
 
 CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -60,7 +62,7 @@ def resp(status: int, body: dict) -> dict:
 
 
 def send_reset_email(to_email: str, name: str, reset_url: str) -> bool:
-    if not RESEND_API_KEY:
+    if not SMTPBZ_API_KEY:
         return False
     html = f"""
     <div style="font-family: -apple-system, Segoe UI, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
@@ -73,13 +75,19 @@ def send_reset_email(to_email: str, name: str, reset_url: str) -> bool:
       <p style="color: #666; font-size: 13px;">Ссылка действует 1 час. Если вы не запрашивали сброс — просто проигнорируйте это письмо.</p>
     </div>
     """
-    payload = json.dumps(
-        {"from": MAIL_FROM, "to": [to_email], "subject": "Восстановление пароля — БотВПотоке", "html": html}
+    payload = urllib.parse.urlencode(
+        {
+            "from": MAIL_FROM,
+            "name": MAIL_FROM_NAME,
+            "subject": "Восстановление пароля — БотВПотоке",
+            "to": to_email,
+            "html": html,
+        }
     ).encode("utf-8")
     req = urllib.request.Request(
-        "https://api.resend.com/emails",
+        "https://api.smtp.bz/v1/smtp/send",
         data=payload,
-        headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+        headers={"Authorization": SMTPBZ_API_KEY, "Content-Type": "application/x-www-form-urlencoded"},
         method="POST",
     )
     try:

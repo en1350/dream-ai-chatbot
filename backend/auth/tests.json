@@ -1,0 +1,45 @@
+{
+  "tests": [
+    {
+      "name": "CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Регистрация без согласия отклоняется",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"email": "test@example.com", "name": "Тест", "password": "secret123", "consent": false},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Регистрация с коротким паролем отклоняется",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"email": "test2@example.com", "name": "Тест", "password": "123", "consent": true},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Вход с неверными данными отклоняется",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"email": "nobody-xyz@example.com", "password": "wrongpass"},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Профиль без токена требует авторизацию",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

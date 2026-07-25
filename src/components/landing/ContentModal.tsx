@@ -6,9 +6,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  wide?: boolean;
 }
 
-export default function ContentModal({ open, onClose, children }: Props) {
+export default function ContentModal({ open, onClose, children, wide = false }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -30,7 +31,7 @@ export default function ContentModal({ open, onClose, children }: Props) {
       className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/70 backdrop-blur-sm p-4 sm:p-8 animate-fade-up"
       onClick={onClose}
     >
-      <div className="relative w-full max-w-4xl my-4" onClick={(e) => e.stopPropagation()}>
+      <div className={`relative w-full ${wide ? "max-w-6xl" : "max-w-4xl"} my-4`} onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onClose}
           aria-label="Закрыть"

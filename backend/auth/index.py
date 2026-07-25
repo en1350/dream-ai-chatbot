@@ -3,12 +3,16 @@ import os
 import hashlib
 import secrets
 import re
+import urllib.request
 
 import psycopg2
 
 SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
 
 PLANS = {"start", "pro"}
+
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+MAIL_FROM = os.environ.get("MAIL_FROM", "БотВПотоке <onboarding@resend.dev>")
 
 CORS = {
     "Access-Control-Allow-Origin": "*",
@@ -55,6 +59,36 @@ def resp(status: int, body: dict) -> dict:
     return {"statusCode": status, "headers": JSON_HEADERS, "body": json.dumps(body)}
 
 
+def send_reset_email(to_email: str, name: str, reset_url: str) -> bool:
+    if not RESEND_API_KEY:
+        return False
+    html = f"""
+    <div style="font-family: -apple-system, Segoe UI, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
+      <h2 style="color: #2B7FFF;">Восстановление пароля</h2>
+      <p>Здравствуйте, {name}!</p>
+      <p>Вы запросили сброс пароля в сервисе «БотВПотоке». Нажмите на кнопку ниже, чтобы задать новый пароль:</p>
+      <p style="text-align: center; margin: 28px 0;">
+        <a href="{reset_url}" style="display: inline-block; background: #2B7FFF; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: 600;">Сбросить пароль</a>
+      </p>
+      <p style="color: #666; font-size: 13px;">Ссылка действует 1 час. Если вы не запрашивали сброс — просто проигнорируйте это письмо.</p>
+    </div>
+    """
+    payload = json.dumps(
+        {"from": MAIL_FROM, "to": [to_email], "subject": "Восстановление пароля — БотВПотоке", "html": html}
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return 200 <= r.status < 300
+    except Exception:
+        return False
+
+
 def get_user_by_token(cur, token: str):
     cur.execute(
         f"""SELECT u.id, u.email, u.name, u.plan, u.created_at
@@ -67,7 +101,7 @@ def get_user_by_token(cur, token: str):
 
 
 def handler(event: dict, context) -> dict:
-    """Регистрация, вход, профиль и смена тарифа пользователя. POST ?action=register|login, GET профиль по токену, PUT смена тарифа."""
+    """Регистрация, вход, восстановление пароля, профиль и смена тарифа. POST ?action=register|login|forgot|reset, GET профиль, PUT смена тарифа."""
     method = event.get("httpMethod", "GET")
     if method == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
@@ -75,6 +109,7 @@ def handler(event: dict, context) -> dict:
     params = event.get("queryStringParameters") or {}
     headers = event.get("headers") or {}
     token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
+    origin = headers.get("Origin") or headers.get("origin") or ""
 
     try:
         body = json.loads(event.get("body") or "{}")
@@ -139,6 +174,49 @@ def handler(event: dict, context) -> dict:
                 )
                 conn.commit()
                 return resp(200, {"token": new_token, "user": user_to_dict(row[:5])})
+
+            if action == "forgot":
+                email = (body.get("email") or "").strip().lower()
+                if not EMAIL_RE.match(email):
+                    return resp(400, {"error": "Введите корректный email"})
+                cur.execute(f"SELECT id, name FROM {SCHEMA}.users WHERE email = %s", (email,))
+                row = cur.fetchone()
+                # Всегда отвечаем успехом, чтобы не раскрывать наличие email в базе.
+                if row:
+                    reset_token = secrets.token_hex(32)
+                    cur.execute(
+                        f"INSERT INTO {SCHEMA}.password_resets (user_id, token) VALUES (%s, %s)",
+                        (row[0], reset_token),
+                    )
+                    conn.commit()
+                    base = origin.rstrip("/") if origin.startswith("http") else ""
+                    reset_url = f"{base}/reset-password?token={reset_token}"
+                    send_reset_email(email, row[1], reset_url)
+                return resp(200, {"success": True})
+
+            if action == "reset":
+                reset_token = body.get("token") or ""
+                new_password = body.get("password") or ""
+                if len(new_password) < 6:
+                    return resp(400, {"error": "Пароль должен быть не короче 6 символов"})
+                cur.execute(
+                    f"""SELECT id, user_id FROM {SCHEMA}.password_resets
+                        WHERE token = %s AND used_at IS NULL AND expires_at > now()""",
+                    (reset_token,),
+                )
+                pr = cur.fetchone()
+                if not pr:
+                    return resp(400, {"error": "Ссылка недействительна или устарела"})
+                cur.execute(
+                    f"UPDATE {SCHEMA}.users SET password_hash = %s WHERE id = %s",
+                    (make_stored_hash(new_password), pr[1]),
+                )
+                cur.execute(
+                    f"UPDATE {SCHEMA}.password_resets SET used_at = now() WHERE id = %s",
+                    (pr[0],),
+                )
+                conn.commit()
+                return resp(200, {"success": True})
 
             return resp(400, {"error": "Unknown action"})
 

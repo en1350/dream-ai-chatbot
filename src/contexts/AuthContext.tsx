@@ -19,6 +19,8 @@ interface AuthCtx {
   login: (data: { email: string; password: string }) => Promise<void>;
   logout: () => void;
   changePlan: (plan: "start" | "pro") => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, password: string) => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -96,8 +98,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
+  const forgotPassword = async (email: string) => {
+    const res = await fetch(`${AUTH_URL}?action=forgot`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Не удалось отправить письмо");
+  };
+
+  const resetPassword = async (token: string, password: string) => {
+    const res = await fetch(`${AUTH_URL}?action=reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Не удалось сменить пароль");
+  };
+
   return (
-    <Ctx.Provider value={{ user, loading, register, login, logout, changePlan }}>{children}</Ctx.Provider>
+    <Ctx.Provider
+      value={{ user, loading, register, login, logout, changePlan, forgotPassword, resetPassword }}
+    >
+      {children}
+    </Ctx.Provider>
   );
 }
 

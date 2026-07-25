@@ -40,6 +40,42 @@
       "expectedStatus": 401,
       "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "Запрос сброса для несуществующего email возвращает успех (не раскрывает базу)",
+      "method": "POST",
+      "path": "/?action=forgot",
+      "body": {"email": "nobody-xyz@example.com"},
+      "expectedStatus": 200,
+      "expectedBody": {"success": true},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Запрос сброса с невалидным email отклоняется",
+      "method": "POST",
+      "path": "/?action=forgot",
+      "body": {"email": "not-an-email"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Сброс с недействительным токеном отклоняется",
+      "method": "POST",
+      "path": "/?action=reset",
+      "body": {"token": "nonexistent-token", "password": "newsecret123"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Сброс с коротким паролем отклоняется",
+      "method": "POST",
+      "path": "/?action=reset",
+      "body": {"token": "any", "password": "123"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
     }
   ]
 }

@@ -19,18 +19,18 @@ export default function LearnBar() {
           Обучение «Логика ботов»
         </button>
         <button
-          onClick={() => setModal("wisdom")}
-          className="group inline-flex items-center gap-2 px-4 py-2 rounded-full border border-aqua/40 bg-aqua/10 text-white text-sm font-medium hover:bg-aqua/20 transition-colors"
-        >
-          <Icon name="Lightbulb" size={16} className="text-aqua" />
-          Мудрая минутка
-        </button>
-        <button
           onClick={() => setModal("academy")}
           className="group inline-flex items-center gap-2 px-4 py-2 rounded-full border border-electric/40 bg-gradient-to-r from-electric/15 to-aqua/15 text-white text-sm font-medium hover:from-electric/25 hover:to-aqua/25 transition-colors"
         >
           <Icon name="Blocks" size={16} className="text-aqua" />
           Академия ботов
+        </button>
+        <button
+          onClick={() => setModal("wisdom")}
+          className="group inline-flex items-center gap-2 px-4 py-2 rounded-full border border-aqua/40 bg-aqua/10 text-white text-sm font-medium hover:bg-aqua/20 transition-colors"
+        >
+          <Icon name="Lightbulb" size={16} className="text-aqua" />
+          Мудрая минутка
         </button>
       </div>
 

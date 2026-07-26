@@ -22,6 +22,7 @@ interface AuthCtx {
   changePlan: (plan: PlanId) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -99,6 +100,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
+  const deleteAccount = async () => {
+    const token = getToken();
+    if (!token) throw new Error("Требуется авторизация");
+    const res = await fetch(AUTH_URL, {
+      method: "DELETE",
+      headers: { "X-Auth-Token": token },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Не удалось удалить аккаунт");
+    localStorage.removeItem(TOKEN_KEY);
+    setUser(null);
+  };
+
   const forgotPassword = async (email: string) => {
     const res = await fetch(`${AUTH_URL}?action=forgot`, {
       method: "POST",
@@ -121,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ user, loading, register, login, logout, changePlan, forgotPassword, resetPassword }}
+      value={{ user, loading, register, login, logout, changePlan, forgotPassword, resetPassword, deleteAccount }}
     >
       {children}
     </Ctx.Provider>

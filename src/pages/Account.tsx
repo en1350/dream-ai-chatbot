@@ -9,9 +9,12 @@ import { toast } from "sonner";
 const rub = (kopecks: number) => (kopecks / 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 });
 
 export default function Account() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [switching, setSwitching] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [planId, setPlanId] = useState<PlanId | null>(null);
   const [balance, setBalance] = useState(0);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
@@ -95,6 +98,18 @@ export default function Account() {
       toast.error(err instanceof Error ? err.message : "Не удалось сменить тариф");
     } finally {
       setSwitching(null);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      toast.success("Аккаунт удалён");
+      navigate("/", { replace: true });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Не удалось удалить аккаунт");
+      setDeleting(false);
     }
   };
 
@@ -250,6 +265,63 @@ export default function Account() {
               </div>
             );
           })}
+        </div>
+
+        {/* Опасная зона */}
+        <div className="mt-12 rounded-2xl border border-red-500/25 bg-red-500/5 p-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center shrink-0">
+              <Icon name="TriangleAlert" size={20} className="text-red-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-white font-semibold">Удалить аккаунт</h3>
+              <p className="text-white/50 text-sm mt-1 mb-4">
+                Безвозвратно удалит ваш профиль, ботов, заявки, интеграции и кошелёк. Отменить это действие
+                нельзя.
+              </p>
+
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/40 text-red-400 text-sm font-medium hover:bg-red-500/10 transition-colors"
+                >
+                  <Icon name="Trash2" size={16} /> Удалить аккаунт
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-white/70">
+                    Для подтверждения введите <span className="text-red-400 font-semibold">УДАЛИТЬ</span>:
+                  </p>
+                  <input
+                    value={deleteInput}
+                    onChange={(e) => setDeleteInput(e.target.value)}
+                    placeholder="УДАЛИТЬ"
+                    className="w-full max-w-xs h-10 rounded-lg bg-white/5 border border-red-500/30 px-3 text-sm text-white placeholder:text-white/30 focus:border-red-500 focus:outline-none transition-colors"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={deleteInput.trim().toUpperCase() !== "УДАЛИТЬ" || deleting}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {deleting ? <Icon name="LoaderCircle" size={16} className="animate-spin" /> : <Icon name="Trash2" size={16} />}
+                      {deleting ? "Удаляю…" : "Удалить навсегда"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setConfirmDelete(false);
+                        setDeleteInput("");
+                      }}
+                      disabled={deleting}
+                      className="px-4 py-2.5 rounded-xl border border-white/15 text-white/70 text-sm hover:bg-white/5 transition-colors"
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

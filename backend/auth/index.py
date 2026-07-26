@@ -26,7 +26,7 @@ MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "БотВПотоке")
 
 CORS = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Auth-Token",
     "Access-Control-Max-Age": "86400",
 }
@@ -265,6 +265,50 @@ def handler(event: dict, context) -> dict:
             updated = cur.fetchone()
             conn.commit()
             return resp(200, {"user": user_to_dict(updated)})
+
+        if method == "DELETE":
+            if not token:
+                return resp(401, {"error": "Требуется авторизация"})
+            user = get_user_by_token(cur, token)
+            if not user:
+                return resp(401, {"error": "Сессия недействительна"})
+            uid = user[0]
+            # Удаляем все данные пользователя, затем сам аккаунт.
+            cur.execute(
+                f"""DELETE FROM {SCHEMA}.vk_integrations
+                    WHERE bot_id IN (SELECT id FROM {SCHEMA}.bots WHERE user_id = %s)""",
+                (uid,),
+            )
+            cur.execute(
+                f"""DELETE FROM {SCHEMA}.vk_sessions
+                    WHERE bot_id IN (SELECT id FROM {SCHEMA}.bots WHERE user_id = %s)""",
+                (uid,),
+            )
+            cur.execute(
+                f"""DELETE FROM {SCHEMA}.bot_edges
+                    WHERE bot_id IN (SELECT id FROM {SCHEMA}.bots WHERE user_id = %s)""",
+                (uid,),
+            )
+            cur.execute(
+                f"""DELETE FROM {SCHEMA}.bot_nodes
+                    WHERE bot_id IN (SELECT id FROM {SCHEMA}.bots WHERE user_id = %s)""",
+                (uid,),
+            )
+            cur.execute(
+                f"""DELETE FROM {SCHEMA}.leads
+                    WHERE bot_id IN (SELECT id FROM {SCHEMA}.bots WHERE user_id = %s)
+                    OR landing_id IN (SELECT id FROM {SCHEMA}.landings WHERE user_id = %s)""",
+                (uid, uid),
+            )
+            cur.execute(f"DELETE FROM {SCHEMA}.landings WHERE user_id = %s", (uid,))
+            cur.execute(f"DELETE FROM {SCHEMA}.bots WHERE user_id = %s", (uid,))
+            cur.execute(f"DELETE FROM {SCHEMA}.wallet_transactions WHERE user_id = %s", (uid,))
+            cur.execute(f"DELETE FROM {SCHEMA}.events WHERE user_id = %s", (uid,))
+            cur.execute(f"DELETE FROM {SCHEMA}.password_resets WHERE user_id = %s", (uid,))
+            cur.execute(f"DELETE FROM {SCHEMA}.sessions WHERE user_id = %s", (uid,))
+            cur.execute(f"DELETE FROM {SCHEMA}.users WHERE id = %s", (uid,))
+            conn.commit()
+            return resp(200, {"success": True})
 
         return resp(405, {"error": "Method not allowed"})
     finally:

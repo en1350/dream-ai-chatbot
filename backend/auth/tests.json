@@ -42,6 +42,14 @@
       "bodyMatcher": "partial"
     },
     {
+      "name": "Удаление аккаунта без токена требует авторизацию",
+      "method": "DELETE",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "Запрос сброса для несуществующего email возвращает успех (не раскрывает базу)",
       "method": "POST",
       "path": "/?action=forgot",

@@ -16,6 +16,11 @@ export default function Account() {
   const [balance, setBalance] = useState(0);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [demoDaysLeft, setDemoDaysLeft] = useState<number | null>(null);
+  const [lastPlanTx, setLastPlanTx] = useState<{
+    amountKopecks: number;
+    description: string;
+    createdAt: string | null;
+  } | null>(null);
 
   const loadBilling = () => {
     fetch(func2url["billing"])
@@ -27,10 +32,27 @@ export default function Account() {
         setDemoDaysLeft(data.demoDaysLeft ?? null);
       })
       .catch(() => {});
+    fetch(func2url["wallet"])
+      .then((res) => res.json())
+      .then((data) => {
+        const tx = (data.transactions ?? []).find(
+          (t: { kind: string; status: string }) => t.kind === "plan" && t.status === "succeeded",
+        );
+        setLastPlanTx(tx ?? null);
+      })
+      .catch(() => {});
   };
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+
+  const formatDateTime = (iso: string) =>
+    new Date(iso).toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   useEffect(() => {
     if (!loading && !user) navigate("/login", { replace: true });
@@ -125,6 +147,24 @@ export default function Account() {
             </div>
           </Link>
         </div>
+
+        {/* Последнее списание за тариф */}
+        {lastPlanTx && (
+          <div className="rounded-2xl border border-white/10 bg-ink2/50 px-5 py-4 mb-8 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+              <Icon name="ReceiptText" size={17} className="text-white/50" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-white truncate">{lastPlanTx.description}</p>
+              <p className="text-[11px] text-white/40">
+                {lastPlanTx.createdAt ? formatDateTime(lastPlanTx.createdAt) : "Списание с кошелька"}
+              </p>
+            </div>
+            <p className="text-sm font-medium text-white/70 shrink-0">
+              {rub(lastPlanTx.amountKopecks)} ₽
+            </p>
+          </div>
+        )}
 
         {/* Тарифы */}
         <div className="flex items-center justify-between mb-5">

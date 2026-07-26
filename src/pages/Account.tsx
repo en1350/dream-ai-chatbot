@@ -14,6 +14,8 @@ export default function Account() {
   const [switching, setSwitching] = useState<string | null>(null);
   const [planId, setPlanId] = useState<PlanId | null>(null);
   const [balance, setBalance] = useState(0);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [demoDaysLeft, setDemoDaysLeft] = useState<number | null>(null);
 
   const loadBilling = () => {
     fetch(func2url["billing"])
@@ -21,9 +23,14 @@ export default function Account() {
       .then((data) => {
         setPlanId(data.planId ?? null);
         setBalance(data.balanceKopecks ?? 0);
+        setExpiresAt(data.planExpiresAt ?? null);
+        setDemoDaysLeft(data.demoDaysLeft ?? null);
       })
       .catch(() => {});
   };
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 
   useEffect(() => {
     if (!loading && !user) navigate("/login", { replace: true });
@@ -188,6 +195,16 @@ export default function Account() {
                 {notEnough && !active && (
                   <p className="text-[11px] text-white/40 text-center mt-2">
                     Не хватает {rub(plan.priceKopecks - balance)} ₽
+                  </p>
+                )}
+                {active && demoDaysLeft !== null && (
+                  <p className="flex items-center justify-center gap-1.5 text-[11px] text-amber-400 text-center mt-3">
+                    <Icon name="Clock" size={12} /> Осталось дней демо: {demoDaysLeft}
+                  </p>
+                )}
+                {active && demoDaysLeft === null && expiresAt && (
+                  <p className="flex items-center justify-center gap-1.5 text-[11px] text-white/50 text-center mt-3">
+                    <Icon name="CalendarCheck" size={12} /> Оплачен до {formatDate(expiresAt)}
                   </p>
                 )}
               </div>

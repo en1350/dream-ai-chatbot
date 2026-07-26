@@ -197,12 +197,12 @@ export default function Account() {
                     Не хватает {rub(plan.priceKopecks - balance)} ₽
                   </p>
                 )}
-                {active && demoDaysLeft !== null && (
+                {active && !isPaid && demoDaysLeft !== null && (
                   <p className="flex items-center justify-center gap-1.5 text-[11px] text-amber-400 text-center mt-3">
                     <Icon name="Clock" size={12} /> Осталось дней демо: {demoDaysLeft}
                   </p>
                 )}
-                {active && demoDaysLeft === null && expiresAt && (
+                {active && isPaid && expiresAt && (
                   <p className="flex items-center justify-center gap-1.5 text-[11px] text-white/50 text-center mt-3">
                     <Icon name="CalendarCheck" size={12} /> Оплачен до {formatDate(expiresAt)}
                   </p>

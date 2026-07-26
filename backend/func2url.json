@@ -1,4 +1,5 @@
 {
+  "vk-confirmation": "https://functions.poehali.dev/9a6767bf-6472-4aaa-88c5-b3b81c308f02",
   "vk-callback": "https://functions.poehali.dev/419fb29a-b703-4e68-a27a-998feebf67f6",
   "auth": "https://functions.poehali.dev/b94ae3b2-6548-4889-8531-621f86d0c318",
   "wallet": "https://functions.poehali.dev/67543b4d-a1f4-4e92-b797-0eb696afda79",

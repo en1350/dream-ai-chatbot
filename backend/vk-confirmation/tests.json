@@ -1,0 +1,24 @@
+{
+  "tests": [
+    {
+      "name": "Confirmation возвращает код подтверждения",
+      "method": "POST",
+      "path": "/",
+      "body": {"type": "confirmation", "group_id": 123},
+      "expectedStatus": 200
+    },
+    {
+      "name": "Прочие события возвращают ok",
+      "method": "POST",
+      "path": "/",
+      "body": {"type": "message_new", "group_id": 123, "object": {}},
+      "expectedStatus": 200
+    },
+    {
+      "name": "GET возвращает ok",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}

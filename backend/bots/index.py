@@ -102,6 +102,27 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             return {"statusCode": 200, "headers": headers, "body": json.dumps({"bot": row_to_bot(row)})}
 
+        if method == "DELETE":
+            params = event.get("queryStringParameters") or {}
+            bot_id = params.get("id")
+            if not bot_id or not str(bot_id).isdigit():
+                return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "id is required"})}
+            bot_id = int(bot_id)
+            # Удаляем связанные записи, затем самого бота.
+            cur.execute(f"DELETE FROM {SCHEMA}.vk_integrations WHERE bot_id = {bot_id}")
+            cur.execute(f"DELETE FROM {SCHEMA}.vk_sessions WHERE bot_id = {bot_id}")
+            cur.execute(f"DELETE FROM {SCHEMA}.leads WHERE bot_id = {bot_id}")
+            cur.execute(f"UPDATE {SCHEMA}.landings SET bot_id = NULL WHERE bot_id = {bot_id}")
+            cur.execute(f"DELETE FROM {SCHEMA}.bot_edges WHERE bot_id = {bot_id}")
+            cur.execute(f"DELETE FROM {SCHEMA}.bot_nodes WHERE bot_id = {bot_id}")
+            cur.execute(
+                f"DELETE FROM {SCHEMA}.bots WHERE id = {bot_id} AND user_id = {DEFAULT_USER_ID}"
+            )
+            if cur.rowcount == 0:
+                return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Bot not found"})}
+            conn.commit()
+            return {"statusCode": 200, "headers": headers, "body": json.dumps({"success": True})}
+
         return {"statusCode": 405, "headers": headers, "body": json.dumps({"error": "Method not allowed"})}
     finally:
         conn.close()

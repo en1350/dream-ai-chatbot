@@ -16,6 +16,7 @@ import Privacy from "./pages/Privacy";
 import PersonalData from "./pages/PersonalData";
 import Auth from "./pages/Auth";
 import Account from "./pages/Account";
+import Cabinet from "./pages/Cabinet";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Help from "./pages/Help";
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/cabinet" element={<Cabinet />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/builder/:botId" element={<BotBuilder />} />
           <Route path="/landing-builder/:landingId" element={<LandingBuilder />} />

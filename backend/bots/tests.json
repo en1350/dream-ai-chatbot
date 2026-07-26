@@ -28,6 +28,13 @@
       "body": {"id": 1, "status": "wrong"},
       "expectedStatus": 400,
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "DELETE without id returns 400",
+      "method": "DELETE",
+      "path": "/",
+      "expectedStatus": 400,
+      "bodyMatcher": "partial"
     }
   ]
 }

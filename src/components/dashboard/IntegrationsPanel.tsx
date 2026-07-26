@@ -17,6 +17,7 @@ interface Integration {
   groupName: string;
   active: boolean;
   confirmCode: string;
+  secretKey: string;
 }
 
 export default function IntegrationsPanel() {
@@ -26,9 +27,19 @@ export default function IntegrationsPanel() {
   const [modalBot, setModalBot] = useState<Integration | null>(null);
   const [groupId, setGroupId] = useState("");
   const [accessToken, setAccessToken] = useState("");
+  const [confirmCode, setConfirmCode] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState("");
   const [togglingBotId, setTogglingBotId] = useState<number | null>(null);
+  const [copied, setCopied] = useState("");
+
+  const webhookUrl = func2url["vk-callback"];
+
+  const copy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(""), 1500);
+  };
 
   const load = () => {
     setLoading(true);
@@ -48,6 +59,7 @@ export default function IntegrationsPanel() {
     setModalBot(item);
     setGroupId(item.groupId ? String(item.groupId) : "");
     setAccessToken("");
+    setConfirmCode(item.confirmCode || "");
     setConnectError("");
   };
 
@@ -66,7 +78,7 @@ export default function IntegrationsPanel() {
     fetch(func2url["vk-integration"], {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ botId: modalBot.botId, groupId: groupId.trim(), accessToken: accessToken.trim() }),
+      body: JSON.stringify({ botId: modalBot.botId, groupId: groupId.trim(), accessToken: accessToken.trim(), confirmCode: confirmCode.trim() }),
     })
       .then((res) => res.json())
       .then((data) => {
@@ -198,6 +210,26 @@ export default function IntegrationsPanel() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            <div className="rounded-xl border border-electric/25 bg-electric/[0.06] p-3.5">
+              <div className="flex items-center gap-2 text-xs text-white/70 mb-2">
+                <span className="w-5 h-5 rounded-full bg-electric text-ink text-[11px] font-bold flex items-center justify-center shrink-0">1</span>
+                Адрес для Callback API
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 text-[11px] text-aqua bg-black/30 rounded-lg px-2.5 py-2 truncate">{webhookUrl}</code>
+                <button
+                  onClick={() => copy(webhookUrl, "url")}
+                  className="shrink-0 h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-xs flex items-center gap-1 transition-colors"
+                >
+                  <Icon name={copied === "url" ? "Check" : "Copy"} size={13} />
+                  {copied === "url" ? "Скопировано" : "Копировать"}
+                </button>
+              </div>
+              <p className="text-[11px] text-white/45 leading-relaxed mt-2">
+                ВК → Управление → Работа с API → Callback API → вставьте адрес. ВК покажет «строку, которую должен вернуть сервер» — впишите её ниже в поле «Код подтверждения» и нажмите «Подключить». После этого вернитесь в ВК и нажмите «Подтвердить».
+              </p>
+            </div>
+
             <div>
               <label className="text-xs text-white/50 mb-1.5 block">ID сообщества</label>
               <input
@@ -221,11 +253,45 @@ export default function IntegrationsPanel() {
                 className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
               />
             </div>
+            <div>
+              <label className="text-xs text-white/50 mb-1.5 block">Код подтверждения (из Callback API)</label>
+              <input
+                value={confirmCode}
+                onChange={(e) => setConfirmCode(e.target.value.trim())}
+                placeholder="Например, a1b2c3d4"
+                className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
+              />
+              <p className="text-[11px] text-white/40 mt-1.5">
+                Строка, которую ВК показывает при настройке Callback API как «сервер должен вернуть».
+              </p>
+            </div>
 
             {connectError && (
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 text-xs">
                 <Icon name="TriangleAlert" size={13} />
                 {connectError}
+              </div>
+            )}
+
+            {modalBot?.secretKey && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
+                <div className="flex items-center gap-2 text-xs text-white/70 mb-2">
+                  <span className="w-5 h-5 rounded-full bg-white/10 text-white text-[11px] font-bold flex items-center justify-center shrink-0">2</span>
+                  Секретный ключ (Callback API → Секретный ключ)
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-[11px] text-aqua bg-black/30 rounded-lg px-2.5 py-2 truncate">{modalBot.secretKey}</code>
+                  <button
+                    onClick={() => copy(modalBot.secretKey, "secret")}
+                    className="shrink-0 h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-xs flex items-center gap-1 transition-colors"
+                  >
+                    <Icon name={copied === "secret" ? "Check" : "Copy"} size={13} />
+                    {copied === "secret" ? "Скопировано" : "Копировать"}
+                  </button>
+                </div>
+                <p className="text-[11px] text-white/45 leading-relaxed mt-2">
+                  Вставьте в ВК → Callback API → Секретный ключ. И в разделе «Типы событий» включите «Входящее сообщение».
+                </p>
               </div>
             )}
 

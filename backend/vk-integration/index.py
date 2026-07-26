@@ -1,5 +1,6 @@
 import json
 import os
+import secrets
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -47,6 +48,7 @@ def row_to_integration(row) -> dict:
         "groupName": row[3] or "",
         "active": bool(row[4]) if row[4] is not None else False,
         "confirmCode": row[5] or "",
+        "secretKey": row[6] or "",
     }
 
 
@@ -79,7 +81,7 @@ def handler(event: dict, context) -> dict:
 
         if method == "GET":
             cur.execute(
-                f"""SELECT b.id, b.name, vk.group_id, vk.group_name, vk.active, vk.confirm_code
+                f"""SELECT b.id, b.name, vk.group_id, vk.group_name, vk.active, vk.confirm_code, vk.secret_key
                     FROM {SCHEMA}.bots b
                     LEFT JOIN {SCHEMA}.vk_integrations vk ON vk.bot_id = b.id
                     WHERE b.user_id = {DEFAULT_USER_ID}
@@ -97,6 +99,7 @@ def handler(event: dict, context) -> dict:
             bot_id = body.get("botId")
             group_id_input = str(body.get("groupId") or "").strip()
             access_token = (body.get("accessToken") or "").strip()
+            confirm_code_input = (body.get("confirmCode") or "").strip()
 
             if not bot_id or not group_id_input or not access_token:
                 return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "botId, groupId и accessToken обязательны"})}
@@ -113,25 +116,29 @@ def handler(event: dict, context) -> dict:
             except Exception:
                 return {"statusCode": 502, "headers": headers, "body": json.dumps({"error": "Не удалось связаться с VK API"})}
 
-            cur.execute(f"SELECT id FROM {SCHEMA}.vk_integrations WHERE bot_id = {bot_id}")
+            cur.execute(f"SELECT id, secret_key FROM {SCHEMA}.vk_integrations WHERE bot_id = {bot_id}")
             existing = cur.fetchone()
+
+            # secret_key генерируется один раз и не меняется при переподключении.
+            secret_key = (existing[1] if existing and existing[1] else None) or secrets.token_hex(16)
 
             if existing:
                 cur.execute(
                     f"""UPDATE {SCHEMA}.vk_integrations
                         SET group_id = {group['id']}, group_name = '{escape(group['name'])}',
-                            access_token = '{escape(access_token)}', active = true, updated_at = now()
+                            access_token = '{escape(access_token)}', secret_key = '{escape(secret_key)}',
+                            confirm_code = '{escape(confirm_code_input)}', active = true, updated_at = now()
                         WHERE bot_id = {bot_id}"""
                 )
             else:
                 cur.execute(
-                    f"""INSERT INTO {SCHEMA}.vk_integrations (bot_id, group_id, group_name, access_token, active)
-                        VALUES ({bot_id}, {group['id']}, '{escape(group['name'])}', '{escape(access_token)}', true)"""
+                    f"""INSERT INTO {SCHEMA}.vk_integrations (bot_id, group_id, group_name, access_token, secret_key, confirm_code, active)
+                        VALUES ({bot_id}, {group['id']}, '{escape(group['name'])}', '{escape(access_token)}', '{escape(secret_key)}', '{escape(confirm_code_input)}', true)"""
                 )
             conn.commit()
 
             cur.execute(
-                f"""SELECT b.id, b.name, vk.group_id, vk.group_name, vk.active, vk.confirm_code
+                f"""SELECT b.id, b.name, vk.group_id, vk.group_name, vk.active, vk.confirm_code, vk.secret_key
                     FROM {SCHEMA}.bots b
                     LEFT JOIN {SCHEMA}.vk_integrations vk ON vk.bot_id = b.id
                     WHERE b.id = {bot_id}"""

@@ -1,0 +1,25 @@
+{
+  "tests": [
+    {
+      "name": "Неизвестное сообщество возвращает ok",
+      "method": "POST",
+      "path": "/",
+      "body": {"type": "confirmation", "group_id": 999999999},
+      "expectedStatus": 200
+    },
+    {
+      "name": "Неизвестный тип события возвращает ok",
+      "method": "POST",
+      "path": "/",
+      "body": {"type": "some_event", "group_id": 999999999},
+      "expectedStatus": 200
+    },
+    {
+      "name": "Пустое тело не падает",
+      "method": "POST",
+      "path": "/",
+      "body": {},
+      "expectedStatus": 200
+    }
+  ]
+}

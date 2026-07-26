@@ -11,16 +11,22 @@ def get_conn():
 
 
 def row_to_lead(row) -> dict:
+    extra = row[9] if isinstance(row[9], dict) else {}
+    email = row[5] or ""
+    # Скрываем технический email-плейсхолдер лидов из ВК.
+    if email.endswith("@vk.lead"):
+        email = ""
     return {
         "id": row[0],
         "botId": row[1],
         "botName": row[2] or "",
         "landingId": row[3],
         "landingName": row[4] or "",
-        "email": row[5],
+        "email": email,
         "name": row[6] or "",
         "phone": row[7] or "",
         "createdAt": row[8].isoformat() if row[8] else None,
+        "source": extra.get("source", "") if isinstance(extra, dict) else "",
     }
 
 
@@ -49,7 +55,7 @@ def handler(event: dict, context) -> dict:
 
         if method == "GET":
             cur.execute(
-                f"""SELECT l.id, l.bot_id, b.name, l.landing_id, ld.name, l.email, l.name, l.phone, l.created_at
+                f"""SELECT l.id, l.bot_id, b.name, l.landing_id, ld.name, l.email, l.name, l.phone, l.created_at, l.extra
                     FROM {SCHEMA}.leads l
                     LEFT JOIN {SCHEMA}.bots b ON b.id = l.bot_id
                     LEFT JOIN {SCHEMA}.landings ld ON ld.id = l.landing_id

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import urllib.request
 import urllib.error
 import urllib.parse
@@ -7,6 +8,26 @@ import psycopg2
 
 SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
 VK_API_VERSION = "5.199"
+
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+# Телефон: 10-11 цифр, допускаем +, пробелы, скобки, дефисы.
+PHONE_RE = re.compile(r"(?:\+?\d[\s\-()]?){10,15}")
+
+
+def extract_contacts(text: str) -> dict:
+    """Достаёт email и телефон из текста сообщения."""
+    result = {"email": "", "phone": ""}
+    email_match = EMAIL_RE.search(text or "")
+    if email_match:
+        result["email"] = email_match.group(0).strip()
+    for m in PHONE_RE.finditer(text or ""):
+        digits = re.sub(r"\D", "", m.group(0))
+        if 10 <= len(digits) <= 15:
+            if len(digits) == 11 and digits[0] in ("7", "8"):
+                digits = "7" + digits[1:]
+            result["phone"] = "+" + digits
+            break
+    return result
 
 
 def get_conn():
@@ -55,9 +76,17 @@ def build_system_prompt(bot: dict) -> str:
     if examples:
         parts.append(f"Примеры ответов: {examples}")
 
+    lead_instruction = (
+        "Важно: в подходящий момент вежливо предложи оставить контакт (телефон или email), "
+        "чтобы менеджер связался с человеком. Не будь навязчивым и проси контакт только один раз."
+    )
     if not parts:
-        return "Ты — дружелюбный ассистент сообщества. Отвечай кратко, вежливо и по делу."
+        return (
+            "Ты — дружелюбный ассистент сообщества. Отвечай кратко, вежливо и по делу.\n"
+            + lead_instruction
+        )
     parts.append("Отвечай кратко и по делу, как живой человек в переписке.")
+    parts.append(lead_instruction)
     return "\n".join(parts)
 
 
@@ -103,6 +132,60 @@ def vk_send_message(access_token: str, peer_id: int, text: str) -> None:
     )
     with urllib.request.urlopen(req, timeout=15) as resp:
         resp.read()
+
+
+def vk_get_user_name(access_token: str, vk_user_id: int) -> str:
+    """Получает имя и фамилию пользователя ВК."""
+    try:
+        params = urllib.parse.urlencode({
+            "user_ids": vk_user_id,
+            "access_token": access_token,
+            "v": VK_API_VERSION,
+        })
+        url = f"https://api.vk.com/method/users.get?{params}"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        users = data.get("response") or []
+        if users:
+            u = users[0]
+            return f"{u.get('first_name', '')} {u.get('last_name', '')}".strip()
+    except Exception:
+        pass
+    return ""
+
+
+def save_lead(cur, conn, bot_id: int, vk_user_id: int, access_token: str, contacts: dict) -> None:
+    """Создаёт заявку в разделе «Лиды» по контакту из переписки.
+    Один контакт на пользователя ВК — повторные сообщения дополняют запись."""
+    name = vk_get_user_name(access_token, vk_user_id)
+    email = contacts.get("email") or f"vk{vk_user_id}@vk.lead"
+    phone = contacts.get("phone") or ""
+    extra = json.dumps({"source": "vk", "vk_user_id": vk_user_id}, ensure_ascii=False)
+
+    # Не дублируем: ищем существующий лид этого пользователя ВК.
+    cur.execute(
+        f"""SELECT id FROM {SCHEMA}.leads
+            WHERE bot_id = {bot_id} AND extra->>'vk_user_id' = '{vk_user_id}' LIMIT 1"""
+    )
+    existing = cur.fetchone()
+    if existing:
+        sets = []
+        if contacts.get("email"):
+            sets.append(f"email = '{escape(email)}'")
+        if phone:
+            sets.append(f"phone = '{escape(phone)}'")
+        if name:
+            sets.append(f"name = '{escape(name)}'")
+        if sets:
+            cur.execute(f"UPDATE {SCHEMA}.leads SET {', '.join(sets)} WHERE id = {existing[0]}")
+            conn.commit()
+        return
+
+    cur.execute(
+        f"""INSERT INTO {SCHEMA}.leads (bot_id, email, name, phone, extra)
+            VALUES ({bot_id}, '{escape(email)}', '{escape(name)}', '{escape(phone)}', '{escape(extra)}'::jsonb)"""
+    )
+    conn.commit()
 
 
 def load_history(cur, bot_id: int, vk_user_id: int) -> list:
@@ -197,6 +280,14 @@ def handler(event: dict, context) -> dict:
 
             if not text or not peer_id or (from_id and from_id < 0):
                 return {**plain, "body": "ok"}
+
+            # Автосбор заявки: если в сообщении есть телефон или email — сохраняем лид.
+            contacts = extract_contacts(text)
+            if contacts["email"] or contacts["phone"]:
+                try:
+                    save_lead(cur, conn, int(bot_id), int(from_id), access_token, contacts)
+                except Exception:
+                    pass
 
             cur.execute(
                 f"""SELECT prompt_bot_name, prompt_bot_role, prompt_persona, prompt_goal,

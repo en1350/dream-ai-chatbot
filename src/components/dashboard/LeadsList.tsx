@@ -12,6 +12,7 @@ interface Lead {
   name: string;
   phone: string;
   createdAt: string | null;
+  source: string;
 }
 
 function formatDate(iso: string | null): string {
@@ -55,7 +56,7 @@ export default function LeadsList() {
     const header = "Email,Имя,Телефон,Источник,Дата\n";
     const rows = leads
       .map((l) => {
-        const source = l.landingName || l.botName || "";
+        const source = (l.source === "vk" ? "ВК: " : "") + (l.landingName || l.botName || "");
         return [l.email, l.name, l.phone, source, formatDate(l.createdAt)]
           .map((v) => `"${(v || "").replace(/"/g, '""')}"`)
           .join(",");
@@ -128,13 +129,20 @@ export default function LeadsList() {
               <div key={l.id} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3.5 items-center hover:bg-white/[0.03] transition-colors">
                 <span className="text-white text-sm truncate flex items-center gap-2">
                   <Icon name="Mail" size={14} className="text-aqua shrink-0" />
-                  {l.email}
+                  {l.email || "—"}
                 </span>
                 <span className="text-white/60 text-sm truncate">{l.name || "—"}</span>
                 <span className="text-white/60 text-sm truncate">{l.phone || "—"}</span>
                 <span className="text-white/40 text-xs truncate">
-                  {l.landingName || l.botName || "—"}
-                  <span className="block text-white/25">{formatDate(l.createdAt)}</span>
+                  <span className="flex items-center gap-1.5">
+                    {l.source === "vk" && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#0077FF]/15 text-[#4d9fff] text-[10px] font-medium shrink-0">
+                        <Icon name="MessageCircle" size={10} /> ВК
+                      </span>
+                    )}
+                    <span className="truncate">{l.landingName || l.botName || "—"}</span>
+                  </span>
+                  <span className="block text-white/25 mt-0.5">{formatDate(l.createdAt)}</span>
                 </span>
                 <button
                   onClick={() => remove(l.id)}

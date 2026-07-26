@@ -57,6 +57,10 @@ export default function IntegrationsPanel() {
       setConnectError("Заполните ID сообщества и ключ доступа");
       return;
     }
+    if (!/^\d+$/.test(groupId.trim())) {
+      setConnectError("ID сообщества — это число (например, 215644977), а не адрес или ссылка");
+      return;
+    }
     setConnecting(true);
     setConnectError("");
     fetch(func2url["vk-integration"], {
@@ -198,10 +202,14 @@ export default function IntegrationsPanel() {
               <label className="text-xs text-white/50 mb-1.5 block">ID сообщества</label>
               <input
                 value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
+                onChange={(e) => setGroupId(e.target.value.replace(/\D/g, ""))}
+                inputMode="numeric"
                 placeholder="215644977"
                 className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
               />
+              <p className="text-[11px] text-white/40 mt-1.5">
+                Только цифры. Найти можно в адресе сообщества: ВК → Управление → Настройки → внизу «id: …»
+              </p>
             </div>
             <div>
               <label className="text-xs text-white/50 mb-1.5 block">Ключ доступа сообщества</label>

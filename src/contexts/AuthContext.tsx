@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import func2url from "../../backend/func2url.json";
+import type { PlanId } from "@/lib/plans";
 
 const AUTH_URL = func2url["auth"];
 const TOKEN_KEY = "auth_token";
@@ -8,7 +9,7 @@ export interface User {
   id: number;
   email: string;
   name: string;
-  plan: "start" | "pro";
+  plan: PlanId;
   createdAt: string | null;
 }
 
@@ -18,7 +19,7 @@ interface AuthCtx {
   register: (data: { name: string; email: string; password: string; consent: boolean }) => Promise<void>;
   login: (data: { email: string; password: string }) => Promise<void>;
   logout: () => void;
-  changePlan: (plan: "start" | "pro") => Promise<void>;
+  changePlan: (plan: PlanId) => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
 }
@@ -85,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const changePlan = async (plan: "start" | "pro") => {
+  const changePlan = async (plan: PlanId) => {
     const token = getToken();
     if (!token) throw new Error("Требуется авторизация");
     const res = await fetch(AUTH_URL, {

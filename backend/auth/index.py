@@ -11,7 +11,14 @@ import psycopg2
 
 SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
 
-PLANS = {"start", "pro"}
+PLANS = {"demo", "standard", "pro"}
+LEGACY_PLAN_MAP = {"start": "demo", "business": "standard", "agency": "pro"}
+
+
+def normalize_plan(raw):
+    if raw in PLANS:
+        return raw
+    return LEGACY_PLAN_MAP.get(raw, "demo")
 
 SMTPBZ_API_KEY = os.environ.get("SMTPBZ_API_KEY", "")
 MAIL_FROM = os.environ.get("MAIL_FROM", "noreply@bot-flow.ru")
@@ -53,7 +60,7 @@ def user_to_dict(row) -> dict:
         "id": row[0],
         "email": row[1],
         "name": row[2],
-        "plan": row[3],
+        "plan": normalize_plan(row[3]),
         "createdAt": row[4].isoformat() if row[4] else None,
     }
 
@@ -158,7 +165,7 @@ def handler(event: dict, context) -> dict:
 
                 cur.execute(
                     f"""INSERT INTO {SCHEMA}.users (email, password_hash, name, plan)
-                        VALUES (%s, %s, %s, 'start')
+                        VALUES (%s, %s, %s, 'demo')
                         RETURNING id, email, name, plan, created_at""",
                     (email, make_stored_hash(password), name),
                 )

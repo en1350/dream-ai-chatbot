@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { PLANS } from "@/lib/plans";
+import { PLANS, type PlanId } from "@/lib/plans";
 import Icon from "@/components/ui/icon";
 import { toast } from "sonner";
 
@@ -24,7 +24,7 @@ export default function Account() {
 
   const currentPlan = PLANS.find((p) => p.id === user.plan);
 
-  const handleChangePlan = async (planId: "start" | "pro") => {
+  const handleChangePlan = async (planId: PlanId) => {
     if (planId === user.plan) return;
     setSwitching(planId);
     try {
@@ -85,7 +85,7 @@ export default function Account() {
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-5">
+        <div className="grid md:grid-cols-3 gap-5">
           {PLANS.map((plan) => {
             const active = plan.id === user.plan;
             return (

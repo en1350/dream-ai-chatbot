@@ -1,5 +1,7 @@
+export type PlanId = "demo" | "standard" | "pro";
+
 export interface Plan {
-  id: "start" | "pro";
+  id: PlanId;
   name: string;
   price: string;
   period: string;
@@ -10,18 +12,21 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
-    id: "start",
-    name: "Старт",
+    id: "demo",
+    name: "Демо",
     price: "0 ₽",
-    period: "навсегда",
+    period: "7 дней бесплатно",
     tagline: "Чтобы попробовать и запустить первого бота",
-    features: [
-      "1 чат-бот",
-      "До 100 диалогов в месяц",
-      "Конструктор сценариев",
-      "Сбор заявок",
-      "Базовая поддержка",
-    ],
+    features: ["1 бот", "100 диалогов", "Сбор лидов", "Интеграция ВК", "Без карты"],
+  },
+  {
+    id: "standard",
+    name: "Стандарт",
+    price: "390 ₽",
+    period: "в месяц",
+    tagline: "Для стабильных продаж и AI-ответов",
+    features: ["5 ботов", "500 диалогов", "AI-ответы", "Лендинги", "Интеграция ВК"],
+    highlighted: true,
   },
   {
     id: "pro",
@@ -29,13 +34,6 @@ export const PLANS: Plan[] = [
     price: "990 ₽",
     period: "в месяц",
     tagline: "Для активных продаж и полной автоматизации",
-    features: [
-      "Неограниченно ботов",
-      "Безлимит диалогов",
-      "AI-ответы и сценарии",
-      "Лендинги и интеграции",
-      "Приоритетная поддержка",
-    ],
-    highlighted: true,
+    features: ["Безлимит ботов", "Приоритетная поддержка", "Лендинги", "Интеграция ВК"],
   },
 ];

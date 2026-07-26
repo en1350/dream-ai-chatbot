@@ -170,21 +170,32 @@ export default function IntegrationsPanel() {
               </p>
 
               {item.connected ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleActive(item)}
-                    disabled={togglingBotId === item.botId}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm transition-colors disabled:opacity-50"
+                <div className="space-y-2">
+                  <a
+                    href={`https://vk.me/club${item.groupId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full px-3 h-9 rounded-lg bg-[#0077FF] hover:bg-[#0066DD] text-white text-sm font-semibold transition-colors"
                   >
-                    <Icon name={item.active ? "Pause" : "Play"} size={14} />
-                    {item.active ? "Пауза" : "Включить"}
-                  </button>
-                  <button
-                    onClick={() => disconnect(item)}
-                    className="flex items-center justify-center gap-1.5 px-3 h-9 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm transition-colors"
-                  >
-                    <Icon name="Unplug" size={14} />
-                  </button>
+                    <Icon name="Send" size={14} />
+                    Написать боту в ВК
+                  </a>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => toggleActive(item)}
+                      disabled={togglingBotId === item.botId}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm transition-colors disabled:opacity-50"
+                    >
+                      <Icon name={item.active ? "Pause" : "Play"} size={14} />
+                      {item.active ? "Пауза" : "Включить"}
+                    </button>
+                    <button
+                      onClick={() => disconnect(item)}
+                      className="flex items-center justify-center gap-1.5 px-3 h-9 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm transition-colors"
+                    >
+                      <Icon name="Unplug" size={14} />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <button

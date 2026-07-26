@@ -172,7 +172,7 @@ export default function IntegrationsPanel() {
               {item.connected ? (
                 <div className="space-y-2">
                   <a
-                    href={`https://vk.me/club${item.groupId}`}
+                    href={`https://vk.com/im?sel=-${item.groupId}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 w-full px-3 h-9 rounded-lg bg-[#0077FF] hover:bg-[#0066DD] text-white text-sm font-semibold transition-colors"

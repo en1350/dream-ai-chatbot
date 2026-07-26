@@ -7,6 +7,7 @@ import Pricing from "@/components/landing/Pricing";
 import Faq from "@/components/landing/Faq";
 import AuthSection from "@/components/landing/AuthSection";
 import Footer from "@/components/landing/Footer";
+import SupportChat from "@/components/landing/SupportChat";
 
 const Index = () => {
   return (
@@ -25,6 +26,7 @@ const Index = () => {
         <AuthSection />
       </main>
       <Footer />
+      <SupportChat />
     </div>
   );
 };

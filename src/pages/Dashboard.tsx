@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Overview from "@/components/dashboard/Overview";
 import BotsList from "@/components/dashboard/BotsList";
@@ -16,7 +17,8 @@ const stubs: Record<string, { title: string; icon: string; text: string }> = {
 };
 
 const Dashboard = () => {
-  const [active, setActive] = useState("overview");
+  const [searchParams] = useSearchParams();
+  const [active, setActive] = useState(searchParams.get("tab") || "overview");
   const stub = stubs[active];
 
   return (

@@ -2,17 +2,36 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLANS, type PlanId } from "@/lib/plans";
+import func2url from "../../backend/func2url.json";
 import Icon from "@/components/ui/icon";
 import { toast } from "sonner";
 
+const rub = (kopecks: number) => (kopecks / 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 });
+
 export default function Account() {
-  const { user, loading, logout, changePlan } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [switching, setSwitching] = useState<string | null>(null);
+  const [planId, setPlanId] = useState<PlanId | null>(null);
+  const [balance, setBalance] = useState(0);
+
+  const loadBilling = () => {
+    fetch(func2url["billing"])
+      .then((res) => res.json())
+      .then((data) => {
+        setPlanId(data.planId ?? null);
+        setBalance(data.balanceKopecks ?? 0);
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (!loading && !user) navigate("/login", { replace: true });
   }, [loading, user, navigate]);
+
+  useEffect(() => {
+    if (user) loadBilling();
+  }, [user]);
 
   if (loading || !user) {
     return (
@@ -22,14 +41,27 @@ export default function Account() {
     );
   }
 
-  const currentPlan = PLANS.find((p) => p.id === user.plan);
+  const activeId = planId ?? user.plan;
+  const currentPlan = PLANS.find((p) => p.id === activeId);
 
-  const handleChangePlan = async (planId: PlanId) => {
-    if (planId === user.plan) return;
-    setSwitching(planId);
+  const handleChoosePlan = async (plan: (typeof PLANS)[number]) => {
+    if (plan.id === activeId) return;
+    if (plan.priceKopecks > 0 && balance < plan.priceKopecks) {
+      toast.error("Недостаточно средств — пополните кошелёк");
+      navigate("/dashboard?tab=wallet");
+      return;
+    }
+    setSwitching(plan.id);
     try {
-      await changePlan(planId);
-      toast.success("Тариф обновлён");
+      const res = await fetch(func2url["billing"], {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: plan.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Не удалось сменить тариф");
+      loadBilling();
+      toast.success(plan.priceKopecks > 0 ? `Тариф «${plan.name}» оплачен` : "Тариф обновлён");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Не удалось сменить тариф");
     } finally {
@@ -68,13 +100,23 @@ export default function Account() {
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-electric to-aqua flex items-center justify-center text-2xl font-bold text-ink shrink-0">
             {user.name.charAt(0).toUpperCase()}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="text-lg font-semibold text-white truncate">{user.name}</div>
             <div className="text-white/50 text-sm truncate">{user.email}</div>
             <div className="mt-1.5 inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-electric/15 text-aqua border border-electric/30">
-              <Icon name="Crown" size={13} /> Тариф «{currentPlan?.name || user.plan}»
+              <Icon name="Crown" size={13} /> Тариф «{currentPlan?.name || activeId}»
             </div>
           </div>
+          <Link
+            to="/dashboard?tab=wallet"
+            className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-ink/50 px-4 py-2.5 hover:border-electric/40 transition-colors shrink-0"
+          >
+            <Icon name="Wallet" size={18} className="text-aqua" />
+            <div>
+              <p className="text-[11px] text-white/40 leading-none mb-0.5">Кошелёк</p>
+              <p className="text-white font-semibold leading-none">{rub(balance)} ₽</p>
+            </div>
+          </Link>
         </div>
 
         {/* Тарифы */}
@@ -87,7 +129,9 @@ export default function Account() {
 
         <div className="grid md:grid-cols-3 gap-5">
           {PLANS.map((plan) => {
-            const active = plan.id === user.plan;
+            const active = plan.id === activeId;
+            const isPaid = plan.priceKopecks > 0;
+            const notEnough = isPaid && balance < plan.priceKopecks;
             return (
               <div
                 key={plan.id}
@@ -122,15 +166,30 @@ export default function Account() {
                 </ul>
                 <button
                   disabled={active || switching !== null}
-                  onClick={() => handleChangePlan(plan.id)}
+                  onClick={() => handleChoosePlan(plan)}
                   className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     active
                       ? "bg-white/5 text-white/40 cursor-default"
+                      : notEnough
+                      ? "border border-white/15 text-white hover:bg-white/5"
                       : "bg-gradient-to-r from-electric to-aqua text-white hover:shadow-[0_6px_20px_rgba(43,127,255,0.4)] disabled:opacity-50"
                   }`}
                 >
-                  {active ? "Подключён" : switching === plan.id ? "Переключаем..." : "Выбрать тариф"}
+                  {active
+                    ? "Подключён"
+                    : switching === plan.id
+                    ? "Оплачиваем…"
+                    : notEnough
+                    ? "Пополнить кошелёк"
+                    : isPaid
+                    ? `Оплатить ${plan.price}`
+                    : "Активировать"}
                 </button>
+                {notEnough && !active && (
+                  <p className="text-[11px] text-white/40 text-center mt-2">
+                    Не хватает {rub(plan.priceKopecks - balance)} ₽
+                  </p>
+                )}
               </div>
             );
           })}

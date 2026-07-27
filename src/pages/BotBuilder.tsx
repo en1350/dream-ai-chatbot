@@ -6,6 +6,8 @@ import Canvas from "@/components/builder/Canvas";
 import NodeInspector from "@/components/builder/NodeInspector";
 import LivePreview from "@/components/builder/LivePreview";
 import AiScenarioModal from "@/components/builder/AiScenarioModal";
+import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Icon from "@/components/ui/icon";
 import { BotNode, BotEdge, NodeCategory } from "@/components/builder/types";
 import { NODE_DEF_MAP } from "@/components/builder/nodeDefs";
@@ -33,6 +35,7 @@ const BotBuilder = () => {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [botStatus, setBotStatus] = useState<"active" | "inactive">("inactive");
   const [publishing, setPublishing] = useState(false);
+  const [vkOpen, setVkOpen] = useState(false);
   const [history, setHistory] = useState<{ nodes: BotNode[]; edges: BotEdge[] }[]>([]);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -363,6 +366,7 @@ const BotBuilder = () => {
         botStatus={botStatus}
         publishing={publishing}
         onTogglePublish={togglePublish}
+        onOpenVk={realBotId ? () => setVkOpen(true) : undefined}
       />
       <div className="flex flex-1 min-h-0">
         <NodePalette onAddNode={(subtype) => addNode(subtype)} onOpenAiModal={() => setAiModalOpen(true)} />
@@ -400,6 +404,14 @@ const BotBuilder = () => {
       {aiModalOpen && (
         <AiScenarioModal onClose={() => setAiModalOpen(false)} onGenerated={applyAiScenario} />
       )}
+      <Dialog open={vkOpen} onOpenChange={setVkOpen}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Настройка в ВКонтакте</DialogTitle>
+          </DialogHeader>
+          {realBotId && <IntegrationsPanel onlyBotId={realBotId} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

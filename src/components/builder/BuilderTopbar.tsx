@@ -26,9 +26,10 @@ interface Props {
   botStatus?: "active" | "inactive";
   publishing?: boolean;
   onTogglePublish?: () => void;
+  onOpenVk?: () => void;
 }
 
-export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow, onUndo, canUndo, botStatus = "inactive", publishing = false, onTogglePublish }: Props) {
+export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow, onUndo, canUndo, botStatus = "inactive", publishing = false, onTogglePublish, onOpenVk }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(botName);
   const navigate = useNavigate();
@@ -147,6 +148,17 @@ export default function BuilderTopbar({ botName, onRename, previewOpen, onToggle
       )}
 
       <div className="w-px h-5 bg-white/10 shrink-0" />
+
+      {onOpenVk && (
+        <button
+          onClick={onOpenVk}
+          title="Подключить и настроить бота во ВКонтакте"
+          className="flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors shrink-0"
+        >
+          <Icon name="Share2" size={15} />
+          <span className="hidden sm:inline">Настройка в ВК</span>
+        </button>
+      )}
 
       <button
         onClick={onTogglePreview}

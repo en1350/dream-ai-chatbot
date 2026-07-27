@@ -20,7 +20,12 @@ interface Integration {
   secretKey: string;
 }
 
-export default function IntegrationsPanel() {
+interface PanelProps {
+  onlyBotId?: number;
+  autoOpen?: boolean;
+}
+
+export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = {}) {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -49,13 +54,23 @@ export default function IntegrationsPanel() {
       .then((res) => res.json())
       .then((data) => {
         if (data.error) setError(data.error);
-        else setIntegrations(data.integrations || []);
+        else {
+          const list: Integration[] = data.integrations || [];
+          setIntegrations(onlyBotId ? list.filter((i) => i.botId === onlyBotId) : list);
+        }
       })
       .catch(() => setError("Не удалось загрузить интеграции"))
       .finally(() => setLoading(false));
   };
 
   useEffect(load, []);
+
+  useEffect(() => {
+    if (autoOpen && onlyBotId && integrations.length === 1 && !modalBot) {
+      openModal(integrations[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, onlyBotId, integrations]);
 
   const openModal = (item: Integration) => {
     setModalBot(item);
@@ -143,10 +158,12 @@ export default function IntegrationsPanel() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="font-display text-3xl text-white">Интеграции</h1>
-        <p className="text-white/50 text-sm mt-1">Подключите сообщество ВКонтакте к боту, чтобы он отвечал на сообщения</p>
-      </div>
+      {!onlyBotId && (
+        <div className="mb-8">
+          <h1 className="font-display text-3xl text-white">Интеграции</h1>
+          <p className="text-white/50 text-sm mt-1">Подключите сообщество ВКонтакте к боту, чтобы он отвечал на сообщения</p>
+        </div>
+      )}
 
       {loading && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -174,7 +191,7 @@ export default function IntegrationsPanel() {
       )}
 
       {!loading && !error && integrations.length > 0 && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={onlyBotId ? "" : "grid sm:grid-cols-2 lg:grid-cols-3 gap-4"}>
           {integrations.map((item) => (
             <div key={item.botId} className="rounded-2xl border border-white/8 bg-ink2/50 p-6">
               <div className="flex items-center justify-between mb-5">

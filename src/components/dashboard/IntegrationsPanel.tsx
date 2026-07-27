@@ -209,7 +209,7 @@ export default function IntegrationsPanel() {
                     <p className="text-[11px] text-amber-200/80 leading-relaxed">
                       Бот молчит? Откройте{" "}
                       <a
-                        href={`https://vk.com/club${item.groupId}?act=manage`}
+                        href={`https://vk.com/club${item.groupId}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-amber-300 underline underline-offset-2 hover:text-amber-200"

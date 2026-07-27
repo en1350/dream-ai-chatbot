@@ -36,10 +36,23 @@ const BotBuilder = () => {
   const [botStatus, setBotStatus] = useState<"active" | "inactive">("inactive");
   const [publishing, setPublishing] = useState(false);
   const [vkOpen, setVkOpen] = useState(false);
+  const [vkConnected, setVkConnected] = useState(false);
   const [history, setHistory] = useState<{ nodes: BotNode[]; edges: BotEdge[] }[]>([]);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstRun = useRef(true);
+
+  useEffect(() => {
+    if (!realBotId || vkOpen) return;
+    fetch(func2url["vk-integration"])
+      .then((res) => res.json())
+      .then((data) => {
+        const list = data.integrations || [];
+        const cur = list.find((i: { botId: number; connected: boolean }) => i.botId === realBotId);
+        setVkConnected(!!(cur && cur.connected));
+      })
+      .catch(() => {});
+  }, [realBotId, vkOpen]);
   const editTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAddedId = useRef<string | null>(null);
 
@@ -367,6 +380,7 @@ const BotBuilder = () => {
         publishing={publishing}
         onTogglePublish={togglePublish}
         onOpenVk={realBotId ? () => setVkOpen(true) : undefined}
+        vkConnected={vkConnected}
       />
       <div className="flex flex-1 min-h-0">
         <NodePalette onAddNode={(subtype) => addNode(subtype)} onOpenAiModal={() => setAiModalOpen(true)} />

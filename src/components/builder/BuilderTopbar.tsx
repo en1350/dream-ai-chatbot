@@ -27,9 +27,10 @@ interface Props {
   publishing?: boolean;
   onTogglePublish?: () => void;
   onOpenVk?: () => void;
+  vkConnected?: boolean;
 }
 
-export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow, onUndo, canUndo, botStatus = "inactive", publishing = false, onTogglePublish, onOpenVk }: Props) {
+export default function BuilderTopbar({ botName, onRename, previewOpen, onTogglePreview, saveStatus = "saved", onClear, onSaveNow, onUndo, canUndo, botStatus = "inactive", publishing = false, onTogglePublish, onOpenVk, vkConnected = false }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(botName);
   const navigate = useNavigate();
@@ -152,10 +153,15 @@ export default function BuilderTopbar({ botName, onRename, previewOpen, onToggle
       {onOpenVk && (
         <button
           onClick={onOpenVk}
-          title="Подключить и настроить бота во ВКонтакте"
-          className="flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors shrink-0"
+          title={vkConnected ? "Бот подключён к ВКонтакте" : "Подключить и настроить бота во ВКонтакте"}
+          className="relative flex items-center gap-2 px-3.5 h-9 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors shrink-0"
         >
-          <Icon name="Share2" size={15} />
+          <span className="relative">
+            <Icon name="Share2" size={15} />
+            {vkConnected && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-green-500 ring-2 ring-ink2" />
+            )}
+          </span>
           <span className="hidden sm:inline">Настройка в ВК</span>
         </button>
       )}

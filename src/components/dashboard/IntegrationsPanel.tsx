@@ -187,7 +187,8 @@ export default function IntegrationsPanel() {
                   <div className="flex items-start gap-2 rounded-lg bg-amber-400/10 border border-amber-400/20 px-2.5 py-2">
                     <Icon name="TriangleAlert" size={13} className="text-amber-400 shrink-0 mt-0.5" />
                     <p className="text-[11px] text-amber-200/80 leading-relaxed">
-                      Бот молчит? Проверьте, что сообщения включены:{" "}
+                      Бот молчит? Проверьте две настройки в ВК:
+                      <br />1){" "}
                       <a
                         href={`https://vk.com/gim?act=messages&opt=on&gid=${item.groupId}`}
                         target="_blank"
@@ -195,6 +196,15 @@ export default function IntegrationsPanel() {
                         className="text-amber-300 underline underline-offset-2 hover:text-amber-200"
                       >
                         Управление → Сообщения → «Включены»
+                      </a>
+                      <br />2){" "}
+                      <a
+                        href={`https://vk.com/gim?act=api&subact=callbackApiEvents&gid=${item.groupId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-amber-300 underline underline-offset-2 hover:text-amber-200"
+                      >
+                        Callback API → Типы событий → «Входящее сообщение»
                       </a>
                     </p>
                   </div>

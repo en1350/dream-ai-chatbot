@@ -55,6 +55,7 @@ def row_to_integration(row) -> dict:
 def handler(event: dict, context) -> dict:
     """Управление интеграцией ботов с сообществами ВКонтакте.
     GET — список ботов пользователя со статусом подключения VK.
+    GET ?action=check&bot_id= — проверка связи: доходят ли сообщения от ВК до бота.
     POST — подключить сообщество (botId, groupId, accessToken), проверяет токен через VK API.
     PUT — включить/выключить интеграцию (botId, active).
     DELETE ?bot_id= — отключить сообщество."""
@@ -78,6 +79,36 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+
+        if method == "GET" and params.get("action") == "check":
+            bot_id = params.get("bot_id")
+            if not bot_id or not str(bot_id).isdigit():
+                return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "bot_id is required"})}
+            bot_id = int(bot_id)
+
+            cur.execute(f"SELECT group_id, active FROM {SCHEMA}.vk_integrations WHERE bot_id = {bot_id} LIMIT 1")
+            vk = cur.fetchone()
+            if not vk:
+                return {"statusCode": 200, "headers": headers, "body": json.dumps({"status": "not_connected"})}
+
+            cur.execute(
+                f"""SELECT count(*), max(updated_at)
+                    FROM {SCHEMA}.vk_sessions WHERE bot_id = {bot_id}"""
+            )
+            cnt_row = cur.fetchone()
+            dialogs = int(cnt_row[0]) if cnt_row and cnt_row[0] else 0
+            last_at = cnt_row[1].isoformat() if cnt_row and cnt_row[1] else None
+
+            if dialogs > 0:
+                status = "ok"
+            elif not vk[1]:
+                status = "paused"
+            else:
+                status = "no_messages"
+
+            return {"statusCode": 200, "headers": headers, "body": json.dumps({
+                "status": status, "dialogs": dialogs, "lastMessageAt": last_at,
+            })}
 
         if method == "GET":
             cur.execute(

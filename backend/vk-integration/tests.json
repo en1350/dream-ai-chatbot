@@ -19,6 +19,20 @@
       "path": "/",
       "body": {},
       "expectedStatus": 400
+    },
+    {
+      "name": "Check without bot_id returns 400",
+      "method": "GET",
+      "path": "/?action=check",
+      "expectedStatus": 400
+    },
+    {
+      "name": "Check with bot_id returns status",
+      "method": "GET",
+      "path": "/?action=check&bot_id=999999",
+      "expectedStatus": 200,
+      "expectedBody": {"status": "string"},
+      "bodyMatcher": "partial"
     }
   ]
 }

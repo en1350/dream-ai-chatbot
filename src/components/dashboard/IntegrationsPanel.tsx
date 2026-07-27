@@ -32,6 +32,8 @@ export default function IntegrationsPanel() {
   const [connectError, setConnectError] = useState("");
   const [togglingBotId, setTogglingBotId] = useState<number | null>(null);
   const [copied, setCopied] = useState("");
+  const [checkingBotId, setCheckingBotId] = useState<number | null>(null);
+  const [checkResult, setCheckResult] = useState<Record<number, { status: string; dialogs: number; lastMessageAt: string | null }>>({});
 
   const webhookUrl = func2url["vk-callback"];
 
@@ -111,6 +113,24 @@ export default function IntegrationsPanel() {
         }
       })
       .finally(() => setTogglingBotId(null));
+  };
+
+  const checkConnection = (item: Integration) => {
+    setCheckingBotId(item.botId);
+    setCheckResult((prev) => {
+      const next = { ...prev };
+      delete next[item.botId];
+      return next;
+    });
+    fetch(`${func2url["vk-integration"]}?action=check&bot_id=${item.botId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setCheckResult((prev) => ({ ...prev, [item.botId]: { status: data.status, dialogs: data.dialogs || 0, lastMessageAt: data.lastMessageAt || null } }));
+      })
+      .catch(() => {
+        setCheckResult((prev) => ({ ...prev, [item.botId]: { status: "error", dialogs: 0, lastMessageAt: null } }));
+      })
+      .finally(() => setCheckingBotId(null));
   };
 
   const disconnect = (item: Integration) => {
@@ -208,6 +228,34 @@ export default function IntegrationsPanel() {
                       </a>
                     </p>
                   </div>
+
+                  <button
+                    onClick={() => checkConnection(item)}
+                    disabled={checkingBotId === item.botId}
+                    className="flex items-center justify-center gap-2 w-full px-3 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm transition-colors disabled:opacity-50"
+                  >
+                    <Icon name={checkingBotId === item.botId ? "Loader2" : "Activity"} size={14} className={checkingBotId === item.botId ? "animate-spin" : ""} />
+                    {checkingBotId === item.botId ? "Проверяю…" : "Проверить связь"}
+                  </button>
+
+                  {checkResult[item.botId] && (() => {
+                    const r = checkResult[item.botId];
+                    const map: Record<string, { color: string; icon: string; text: string }> = {
+                      ok: { color: "text-aqua bg-aqua/10 border-aqua/20", icon: "CircleCheck", text: `Связь работает: сообщения доходят до бота. Диалогов: ${r.dialogs}` },
+                      no_messages: { color: "text-amber-200/80 bg-amber-400/10 border-amber-400/20", icon: "TriangleAlert", text: "Пока ни одного сообщения от ВК. Проверьте, что включён тип события «Входящее сообщение» и сообщения сообщества." },
+                      paused: { color: "text-white/60 bg-white/5 border-white/10", icon: "Pause", text: "Интеграция на паузе — нажмите «Включить», чтобы бот отвечал." },
+                      not_connected: { color: "text-red-400 bg-red-500/10 border-red-500/25", icon: "TriangleAlert", text: "Сообщество не подключено." },
+                      error: { color: "text-red-400 bg-red-500/10 border-red-500/25", icon: "TriangleAlert", text: "Не удалось выполнить проверку. Попробуйте ещё раз." },
+                    };
+                    const v = map[r.status] || map.error;
+                    return (
+                      <div className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 ${v.color}`}>
+                        <Icon name={v.icon} size={13} className="shrink-0 mt-0.5" />
+                        <p className="text-[11px] leading-relaxed">{v.text}</p>
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex gap-2">
                     <button
                       onClick={() => toggleActive(item)}

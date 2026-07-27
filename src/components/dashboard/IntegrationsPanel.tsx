@@ -298,22 +298,22 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
       )}
 
       <Dialog open={!!modalBot} onOpenChange={(open) => !open && setModalBot(null)}>
-        <DialogContent className="bg-ink2 border-white/10 text-white">
+        <DialogContent className="bg-ink border-white/15 text-white">
           <DialogHeader>
             <DialogTitle>Подключить ВКонтакте</DialogTitle>
-            <DialogDescription className="text-white/50">
+            <DialogDescription className="text-white/70">
               Бот «{modalBot?.botName}» будет отвечать на сообщения сообщества
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div className="rounded-xl border border-electric/25 bg-electric/[0.06] p-3.5">
-              <div className="flex items-center gap-2 text-xs text-white/70 mb-2">
+            <div className="rounded-xl border border-electric/40 bg-electric/[0.12] p-3.5">
+              <div className="flex items-center gap-2 text-xs text-white/85 mb-2">
                 <span className="w-5 h-5 rounded-full bg-electric text-ink text-[11px] font-bold flex items-center justify-center shrink-0">1</span>
                 Адрес для Callback API
               </div>
               <div className="flex items-center gap-2">
-                <code className="flex-1 text-[11px] text-aqua bg-black/30 rounded-lg px-2.5 py-2 truncate">{webhookUrl}</code>
+                <code className="flex-1 text-[11px] text-aqua bg-black/50 rounded-lg px-2.5 py-2 truncate">{webhookUrl}</code>
                 <button
                   onClick={() => copy(webhookUrl, "url")}
                   className="shrink-0 h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-xs flex items-center gap-1 transition-colors"
@@ -322,7 +322,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
                   {copied === "url" ? "Скопировано" : "Копировать"}
                 </button>
               </div>
-              <p className="text-[11px] text-white/45 leading-relaxed mt-2">
+              <p className="text-[11px] text-white/75 leading-relaxed mt-2">
                 Порядок важен: 1) ВК → Управление → Работа с API → Callback API → вставьте этот адрес.
                 2) ВК покажет «строку, которую должен вернуть сервер» — скопируйте её в поле «Код подтверждения» ниже
                 и нажмите «Подключить». 3) Только после этого вернитесь в ВК и нажмите «Подтвердить». Если нажать
@@ -331,7 +331,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
             </div>
 
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block">ID сообщества</label>
+              <label className="text-xs text-white/80 mb-1.5 block">ID сообщества</label>
               <input
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value.replace(/\D/g, ""))}
@@ -339,12 +339,12 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
                 placeholder="215644977"
                 className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
               />
-              <p className="text-[11px] text-white/40 mt-1.5">
+              <p className="text-[11px] text-white/70 mt-1.5">
                 Только цифры. Найти можно в адресе сообщества: ВК → Управление → Настройки → внизу «id: …»
               </p>
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Ключ доступа сообщества</label>
+              <label className="text-xs text-white/80 mb-1.5 block">Ключ доступа сообщества</label>
               <input
                 value={accessToken}
                 onChange={(e) => setAccessToken(e.target.value)}
@@ -354,14 +354,14 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
               />
             </div>
             <div>
-              <label className="text-xs text-white/50 mb-1.5 block">Код подтверждения (из Callback API)</label>
+              <label className="text-xs text-white/80 mb-1.5 block">Код подтверждения (из Callback API)</label>
               <input
                 value={confirmCode}
                 onChange={(e) => setConfirmCode(e.target.value.trim())}
                 placeholder="Например, a1b2c3d4"
                 className="w-full h-10 rounded-lg bg-white/5 border border-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:border-electric focus:outline-none transition-colors"
               />
-              <p className="text-[11px] text-white/40 mt-1.5">
+              <p className="text-[11px] text-white/70 mt-1.5">
                 Строка, которую ВК показывает при настройке Callback API как «сервер должен вернуть».
               </p>
             </div>
@@ -374,13 +374,13 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
             )}
 
             {modalBot?.secretKey && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
-                <div className="flex items-center gap-2 text-xs text-white/70 mb-2">
+              <div className="rounded-xl border border-white/15 bg-white/[0.07] p-3.5">
+                <div className="flex items-center gap-2 text-xs text-white/85 mb-2">
                   <span className="w-5 h-5 rounded-full bg-white/10 text-white text-[11px] font-bold flex items-center justify-center shrink-0">2</span>
                   Секретный ключ (Callback API → Секретный ключ)
                 </div>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-[11px] text-aqua bg-black/30 rounded-lg px-2.5 py-2 truncate">{modalBot.secretKey}</code>
+                  <code className="flex-1 text-[11px] text-aqua bg-black/50 rounded-lg px-2.5 py-2 truncate">{modalBot.secretKey}</code>
                   <button
                     onClick={() => copy(modalBot.secretKey, "secret")}
                     className="shrink-0 h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-xs flex items-center gap-1 transition-colors"
@@ -389,29 +389,29 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
                     {copied === "secret" ? "Скопировано" : "Копировать"}
                   </button>
                 </div>
-                <p className="text-[11px] text-white/45 leading-relaxed mt-2">
+                <p className="text-[11px] text-white/75 leading-relaxed mt-2">
                   Вставьте в ВК → Callback API → Секретный ключ. И в разделе «Типы событий» включите «Входящее сообщение».
                 </p>
               </div>
             )}
 
-            <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-3.5">
+            <div className="rounded-xl border border-amber-400/40 bg-amber-400/[0.12] p-3.5">
               <div className="flex items-center gap-2 text-xs text-amber-300 mb-1">
                 <Icon name="TriangleAlert" size={13} />
                 Обязательно: включите сообщения сообщества
               </div>
-              <p className="text-xs text-white/50 leading-relaxed">
+              <p className="text-xs text-white/80 leading-relaxed">
                 Сообщество ВК → Управление → Сообщения → переключатель «Включены». Без этого бот не сможет
                 получать и отправлять сообщения, а диалог будет открываться пустым.
               </p>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
-              <div className="flex items-center gap-2 text-xs text-white/60 mb-1">
+            <div className="rounded-xl border border-white/15 bg-white/[0.07] p-3.5">
+              <div className="flex items-center gap-2 text-xs text-white/80 mb-1">
                 <Icon name="Info" size={13} className="text-aqua" />
                 Где взять ключ
               </div>
-              <p className="text-xs text-white/45 leading-relaxed">
+              <p className="text-xs text-white/75 leading-relaxed">
                 Сообщество ВК → Управление → Работа с API → Ключи доступа → создать ключ с правами «Сообщения сообщества».
               </p>
             </div>

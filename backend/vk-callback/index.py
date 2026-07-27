@@ -243,7 +243,10 @@ def handler(event: dict, context) -> dict:
     group_id = body.get("group_id")
     secret = body.get("secret") or ""
 
+    print(f"[vk-callback] type={vk_type} group_id={group_id} has_secret={bool(secret)}")
+
     if not group_id:
+        print("[vk-callback] no group_id in request body")
         return {**plain, "body": "ok"}
 
     conn = get_conn()
@@ -256,12 +259,14 @@ def handler(event: dict, context) -> dict:
         )
         row = cur.fetchone()
         if not row:
+            print(f"[vk-callback] no integration for group_id={group_id}")
             return {**plain, "body": "ok"}
 
         bot_id, access_token, secret_key, confirm_code, active = row
 
         # Подтверждение адреса сервера — возвращаем строку confirmation.
         if vk_type == "confirmation":
+            print(f"[vk-callback] confirmation for group_id={group_id}, confirm_code={'set' if confirm_code else 'EMPTY'}")
             return {**plain, "body": confirm_code or "ok"}
 
         # Проверка секрета (если он задан в настройках Callback API).

@@ -419,9 +419,9 @@ const BotBuilder = () => {
         <AiScenarioModal onClose={() => setAiModalOpen(false)} onGenerated={applyAiScenario} />
       )}
       <Dialog open={vkOpen} onOpenChange={setVkOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto bg-ink border-white/15 text-white">
           <DialogHeader>
-            <DialogTitle>Настройка в ВКонтакте</DialogTitle>
+            <DialogTitle className="text-white">Настройка в ВКонтакте</DialogTitle>
           </DialogHeader>
           {realBotId && <IntegrationsPanel onlyBotId={realBotId} />}
         </DialogContent>

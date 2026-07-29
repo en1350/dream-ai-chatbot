@@ -221,15 +221,15 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
                     <Icon name="Send" size={14} />
                     Написать боту в ВК
                   </a>
-                  <div className="flex items-start gap-2 rounded-lg bg-amber-400/15 border border-amber-400/30 px-2.5 py-2">
-                    <Icon name="TriangleAlert" size={13} className="text-amber-400 shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-amber-100 leading-relaxed">
+                  <div className="flex items-start gap-2 rounded-lg bg-amber-400/15 border border-amber-500/40 px-2.5 py-2">
+                    <Icon name="TriangleAlert" size={13} className="text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-amber-900 leading-relaxed">
                       Бот молчит? Откройте{" "}
                       <a
                         href={`https://vk.com/club${item.groupId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-amber-300 underline underline-offset-2 hover:text-amber-200"
+                        className="text-amber-950 font-medium underline underline-offset-2 hover:text-amber-800"
                       >
                         управление сообществом
                       </a>{" "}

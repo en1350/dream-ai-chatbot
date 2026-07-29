@@ -193,20 +193,20 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
       {!loading && !error && integrations.length > 0 && (
         <div className={onlyBotId ? "" : "grid sm:grid-cols-2 lg:grid-cols-3 gap-4"}>
           {integrations.map((item) => (
-            <div key={item.botId} className="rounded-2xl border border-white/8 bg-ink2/50 p-6">
+            <div key={item.botId} className="rounded-2xl border border-black/10 bg-white p-6">
               <div className="flex items-center justify-between mb-5">
                 <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-electric/25 to-aqua/25 flex items-center justify-center">
-                  <Icon name="MessageCircle" size={20} className="text-aqua" />
+                  <Icon name="MessageCircle" size={20} className="text-electric" />
                 </div>
                 {item.connected && (
-                  <span className={`flex items-center gap-1.5 text-xs ${item.active ? "text-aqua" : "text-white/40"}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${item.active ? "bg-aqua" : "bg-white/30"}`} />
+                  <span className={`flex items-center gap-1.5 text-xs ${item.active ? "text-emerald-600" : "text-gray-400"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${item.active ? "bg-emerald-500" : "bg-gray-300"}`} />
                     {item.active ? "подключено" : "приостановлено"}
                   </span>
                 )}
               </div>
-              <h3 className="text-white font-semibold mb-1">{item.botName}</h3>
-              <p className="text-white/50 text-sm truncate mb-4">
+              <h3 className="text-gray-900 font-semibold mb-1">{item.botName}</h3>
+              <p className="text-gray-500 text-sm truncate mb-4">
                 {item.connected ? item.groupName || `Сообщество #${item.groupId}` : "ВКонтакте не подключено"}
               </p>
 
@@ -242,7 +242,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
                   <button
                     onClick={() => checkConnection(item)}
                     disabled={checkingBotId === item.botId}
-                    className="flex items-center justify-center gap-2 w-full px-3 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm transition-colors disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 w-full px-3 h-9 rounded-lg bg-black/5 hover:bg-black/10 text-gray-700 text-sm transition-colors disabled:opacity-50"
                   >
                     <Icon name={checkingBotId === item.botId ? "Loader2" : "Activity"} size={14} className={checkingBotId === item.botId ? "animate-spin" : ""} />
                     {checkingBotId === item.botId ? "Проверяю…" : "Проверить связь"}
@@ -251,11 +251,11 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
                   {checkResult[item.botId] && (() => {
                     const r = checkResult[item.botId];
                     const map: Record<string, { color: string; icon: string; text: string }> = {
-                      ok: { color: "text-aqua bg-aqua/10 border-aqua/20", icon: "CircleCheck", text: `Связь работает: сообщения доходят до бота. Диалогов: ${r.dialogs}` },
-                      no_messages: { color: "text-amber-200/80 bg-amber-400/10 border-amber-400/20", icon: "TriangleAlert", text: "Пока ни одного сообщения от ВК. Проверьте, что включён тип события «Входящее сообщение» и сообщения сообщества." },
-                      paused: { color: "text-white/60 bg-white/5 border-white/10", icon: "Pause", text: "Интеграция на паузе — нажмите «Включить», чтобы бот отвечал." },
-                      not_connected: { color: "text-red-400 bg-red-500/10 border-red-500/25", icon: "TriangleAlert", text: "Сообщество не подключено." },
-                      error: { color: "text-red-400 bg-red-500/10 border-red-500/25", icon: "TriangleAlert", text: "Не удалось выполнить проверку. Попробуйте ещё раз." },
+                      ok: { color: "text-emerald-700 bg-emerald-500/10 border-emerald-500/25", icon: "CircleCheck", text: `Связь работает: сообщения доходят до бота. Диалогов: ${r.dialogs}` },
+                      no_messages: { color: "text-amber-800 bg-amber-400/15 border-amber-500/30", icon: "TriangleAlert", text: "Пока ни одного сообщения от ВК. Проверьте, что включён тип события «Входящее сообщение» и сообщения сообщества." },
+                      paused: { color: "text-gray-600 bg-black/5 border-black/10", icon: "Pause", text: "Интеграция на паузе — нажмите «Включить», чтобы бот отвечал." },
+                      not_connected: { color: "text-red-600 bg-red-500/10 border-red-500/25", icon: "TriangleAlert", text: "Сообщество не подключено." },
+                      error: { color: "text-red-600 bg-red-500/10 border-red-500/25", icon: "TriangleAlert", text: "Не удалось выполнить проверку. Попробуйте ещё раз." },
                     };
                     const v = map[r.status] || map.error;
                     return (
@@ -270,7 +270,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
                     <button
                       onClick={() => toggleActive(item)}
                       disabled={togglingBotId === item.botId}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 h-9 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm transition-colors disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 h-9 rounded-lg bg-black/5 hover:bg-black/10 text-gray-700 text-sm transition-colors disabled:opacity-50"
                     >
                       <Icon name={item.active ? "Pause" : "Play"} size={14} />
                       {item.active ? "Пауза" : "Включить"}

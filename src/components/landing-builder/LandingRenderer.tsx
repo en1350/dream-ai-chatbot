@@ -21,7 +21,7 @@ function resolveCtaLink(block: LandingBlock, vkGroupId?: number | null): { href:
   }
   if (type === "bot") {
     return vkGroupId
-      ? { href: `https://vk.com/gim${vkGroupId}?sel=-${vkGroupId}`, disabled: false, external: true }
+      ? { href: `https://vk.com/im?sel=-${vkGroupId}`, disabled: false, external: true }
       : { href: "#", disabled: true, external: false };
   }
   const url = (block.ctaLink || "").trim();

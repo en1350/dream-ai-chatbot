@@ -10,8 +10,9 @@ SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
 VK_API_VERSION = "5.199"
 
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-# Телефон: 10-11 цифр, допускаем +, пробелы, скобки, дефисы.
 PHONE_RE = re.compile(r"(?:\+?\d[\s\-()]?){10,15}")
+
+RESTART_WORDS = {"начать", "старт", "start", "начни", "заново", "restart", "/start", "меню", "привет"}
 
 
 def extract_contacts(text: str) -> dict:
@@ -38,8 +39,9 @@ def escape(value: str) -> str:
     return (value or "").replace("'", "''")
 
 
+# ---------- ИИ (запасной вариант для нод типа gpt/ai) ----------
+
 def build_system_prompt(bot: dict) -> str:
-    """Собирает системный промпт из полей персоны бота."""
     parts = []
     name = (bot.get("prompt_bot_name") or "").strip()
     role = (bot.get("prompt_bot_role") or "").strip()
@@ -76,36 +78,26 @@ def build_system_prompt(bot: dict) -> str:
     if examples:
         parts.append(f"Примеры ответов: {examples}")
 
-    lead_instruction = (
-        "Важно: в подходящий момент вежливо предложи оставить контакт (телефон или email), "
-        "чтобы менеджер связался с человеком. Не будь навязчивым и проси контакт только один раз."
-    )
     if not parts:
-        return (
-            "Ты — дружелюбный ассистент сообщества. Отвечай кратко, вежливо и по делу.\n"
-            + lead_instruction
-        )
+        return "Ты — дружелюбный ассистент сообщества. Отвечай кратко, вежливо и по делу."
     parts.append("Отвечай кратко и по делу, как живой человек в переписке.")
-    parts.append(lead_instruction)
     return "\n".join(parts)
 
 
-def call_ai(system_prompt: str, history: list) -> str:
+def call_ai(system_prompt: str, user_text: str) -> str:
     api_key = os.environ.get("API_CHATBOT", "")
     if not api_key:
         raise ValueError("AI ключ не настроен")
-    messages = [{"role": "system", "content": system_prompt}]
-    for m in history[-10:]:
-        role = "user" if m.get("from") == "user" else "assistant"
-        messages.append({"role": role, "content": m.get("text", "")})
-
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_text},
+    ]
     payload = json.dumps({
         "model": "gpt-4o-mini",
         "max_tokens": 400,
         "temperature": 0.7,
         "messages": messages,
     }).encode("utf-8")
-
     req = urllib.request.Request(
         "https://api.aitunnel.ru/v1/chat/completions",
         data=payload,
@@ -117,25 +109,41 @@ def call_ai(system_prompt: str, history: list) -> str:
     return body["choices"][0]["message"]["content"].strip()
 
 
-def vk_send_message(access_token: str, peer_id: int, text: str) -> None:
-    params = urllib.parse.urlencode({
+# ---------- Отправка сообщений и клавиатуры в ВК ----------
+
+def build_keyboard(buttons: list) -> str:
+    """Формирует JSON-клавиатуру ВК из списка подписей кнопок (по одной в строке)."""
+    rows = []
+    for label in buttons:
+        label = (label or "").strip()
+        if not label:
+            continue
+        rows.append([{
+            "action": {"type": "text", "label": label[:40]},
+            "color": "primary",
+        }])
+    return json.dumps({"one_time": False, "inline": False, "buttons": rows}, ensure_ascii=False)
+
+
+def vk_send_message(access_token: str, peer_id: int, text: str, buttons: list = None) -> None:
+    data = {
         "peer_id": peer_id,
         "message": text,
         "random_id": 0,
         "access_token": access_token,
         "v": VK_API_VERSION,
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        "https://api.vk.com/method/messages.send",
-        data=params,
-        method="POST",
-    )
+    }
+    if buttons:
+        data["keyboard"] = build_keyboard(buttons)
+    else:
+        data["keyboard"] = json.dumps({"buttons": [], "one_time": True}, ensure_ascii=False)
+    params = urllib.parse.urlencode(data).encode("utf-8")
+    req = urllib.request.Request("https://api.vk.com/method/messages.send", data=params, method="POST")
     with urllib.request.urlopen(req, timeout=15) as resp:
         resp.read()
 
 
 def vk_get_user_name(access_token: str, vk_user_id: int) -> str:
-    """Получает имя и фамилию пользователя ВК."""
     try:
         params = urllib.parse.urlencode({
             "user_ids": vk_user_id,
@@ -155,14 +163,12 @@ def vk_get_user_name(access_token: str, vk_user_id: int) -> str:
 
 
 def save_lead(cur, conn, bot_id: int, vk_user_id: int, access_token: str, contacts: dict) -> None:
-    """Создаёт заявку в разделе «Лиды» по контакту из переписки.
-    Один контакт на пользователя ВК — повторные сообщения дополняют запись."""
+    """Создаёт/дополняет заявку в разделе «Лиды» по контакту из переписки."""
     name = vk_get_user_name(access_token, vk_user_id)
     email = contacts.get("email") or f"vk{vk_user_id}@vk.lead"
     phone = contacts.get("phone") or ""
     extra = json.dumps({"source": "vk", "vk_user_id": vk_user_id}, ensure_ascii=False)
 
-    # Не дублируем: ищем существующий лид этого пользователя ВК.
     cur.execute(
         f"""SELECT id FROM {SCHEMA}.leads
             WHERE bot_id = {bot_id} AND extra->>'vk_user_id' = '{vk_user_id}' LIMIT 1"""
@@ -188,42 +194,99 @@ def save_lead(cur, conn, bot_id: int, vk_user_id: int, access_token: str, contac
     conn.commit()
 
 
-def load_history(cur, bot_id: int, vk_user_id: int) -> list:
+# ---------- Движок сценария ----------
+
+def load_scenario(cur, bot_id: int) -> dict:
+    """Загружает сценарий бота: ноды и связи."""
     cur.execute(
-        f"""SELECT vars FROM {SCHEMA}.vk_sessions
+        f"""SELECT node_id, type, message, extra FROM {SCHEMA}.bot_nodes WHERE bot_id = {bot_id}"""
+    )
+    nodes = {}
+    for r in cur.fetchall():
+        extra = r[3] or {}
+        if isinstance(extra, str):
+            extra = json.loads(extra)
+        nodes[r[0]] = {
+            "id": r[0],
+            "type": r[1],
+            "text": r[2] or "",
+            "buttons": extra.get("buttons", []),
+            "linkUrl": extra.get("linkUrl", ""),
+            "collectEmail": bool(extra.get("collectEmail", False)),
+        }
+    cur.execute(
+        f"""SELECT source_node_id, target_node_id, label FROM {SCHEMA}.bot_edges WHERE bot_id = {bot_id}"""
+    )
+    edges = [{"source": r[0], "target": r[1], "label": r[2]} for r in cur.fetchall()]
+    return {"nodes": nodes, "edges": edges}
+
+
+def find_start_node(scenario: dict) -> str:
+    for nid, node in scenario["nodes"].items():
+        if node["type"] == "start":
+            return nid
+    targets = {e["target"] for e in scenario["edges"]}
+    for nid in scenario["nodes"]:
+        if nid not in targets:
+            return nid
+    return next(iter(scenario["nodes"]), None)
+
+
+def next_by_button(scenario: dict, node_id: str, text: str) -> str:
+    """Ищет переход из ноды по нажатой кнопке (совпадение по тексту метки ребра)."""
+    text_norm = (text or "").strip().lower()
+    out_edges = [e for e in scenario["edges"] if e["source"] == node_id]
+    for e in out_edges:
+        if (e.get("label") or "").strip().lower() == text_norm:
+            return e["target"]
+    # Если у ноды один выход без метки — идём по нему (например, кнопка «Далее»).
+    if len(out_edges) == 1:
+        return out_edges[0]["target"]
+    return None
+
+
+def get_session(cur, bot_id: int, vk_user_id: int) -> dict:
+    cur.execute(
+        f"""SELECT current_node_id, awaiting_email FROM {SCHEMA}.vk_sessions
             WHERE bot_id = {bot_id} AND vk_user_id = {vk_user_id} LIMIT 1"""
     )
     row = cur.fetchone()
-    if row and row[0]:
-        vars_data = row[0] if isinstance(row[0], dict) else json.loads(row[0])
-        return vars_data.get("history", [])
-    return []
+    if row:
+        return {"current_node_id": row[0], "awaiting_email": bool(row[1])}
+    return None
 
 
-def save_history(cur, conn, bot_id: int, vk_user_id: int, history: list) -> None:
-    trimmed = history[-20:]
-    payload = escape(json.dumps({"history": trimmed}, ensure_ascii=False))
+def save_session(cur, conn, bot_id: int, vk_user_id: int, node_id: str, awaiting_email: bool) -> None:
+    node_sql = f"'{escape(node_id)}'" if node_id else "NULL"
     cur.execute(
-        f"""SELECT id FROM {SCHEMA}.vk_sessions
-            WHERE bot_id = {bot_id} AND vk_user_id = {vk_user_id} LIMIT 1"""
+        f"""SELECT id FROM {SCHEMA}.vk_sessions WHERE bot_id = {bot_id} AND vk_user_id = {vk_user_id} LIMIT 1"""
     )
     if cur.fetchone():
         cur.execute(
-            f"""UPDATE {SCHEMA}.vk_sessions SET vars = '{payload}'::jsonb, updated_at = now()
+            f"""UPDATE {SCHEMA}.vk_sessions
+                SET current_node_id = {node_sql}, awaiting_email = {awaiting_email}, updated_at = now()
                 WHERE bot_id = {bot_id} AND vk_user_id = {vk_user_id}"""
         )
     else:
         cur.execute(
-            f"""INSERT INTO {SCHEMA}.vk_sessions (vk_user_id, bot_id, vars)
-                VALUES ({vk_user_id}, {bot_id}, '{payload}'::jsonb)"""
+            f"""INSERT INTO {SCHEMA}.vk_sessions (vk_user_id, bot_id, current_node_id, awaiting_email)
+                VALUES ({vk_user_id}, {bot_id}, {node_sql}, {awaiting_email})"""
         )
     conn.commit()
 
 
+def render_node(node: dict) -> dict:
+    """Готовит текст и кнопки для отправки ноды в ВК."""
+    text = node["text"]
+    if node.get("linkUrl"):
+        text = f"{text}\n{node['linkUrl']}".strip()
+    return {"text": text or "…", "buttons": node.get("buttons", [])}
+
+
 def handler(event: dict, context) -> dict:
-    """Callback API ВКонтакте: подтверждение сервера (confirmation) и приём сообщений (message_new).
-    На новое сообщение генерирует ответ от лица бота и отправляет его пользователю сообщества.
-    ВК всегда ожидает в ответ строку 'ok' (или confirmation-код)."""
+    """Callback API ВКонтакте: подтверждение сервера и приём сообщений (message_new).
+    Ведёт пользователя по сценарию бота (ноды, кнопки, связи). ИИ используется как запасной
+    вариант в конце сценария. ВК всегда ожидает в ответ строку 'ok' (или confirmation-код)."""
     method = event.get("httpMethod", "POST")
 
     if method == "OPTIONS":
@@ -243,10 +306,7 @@ def handler(event: dict, context) -> dict:
     group_id = body.get("group_id")
     secret = body.get("secret") or ""
 
-    print(f"[vk-callback] type={vk_type} group_id={group_id} has_secret={bool(secret)}")
-
     if not group_id:
-        print("[vk-callback] no group_id in request body")
         return {**plain, "body": "ok"}
 
     conn = get_conn()
@@ -259,77 +319,115 @@ def handler(event: dict, context) -> dict:
         )
         row = cur.fetchone()
         if not row:
-            print(f"[vk-callback] no integration for group_id={group_id}")
             return {**plain, "body": "ok"}
 
         bot_id, access_token, secret_key, confirm_code, active = row
 
-        # Подтверждение адреса сервера — возвращаем строку confirmation.
         if vk_type == "confirmation":
-            print(f"[vk-callback] confirmation for group_id={group_id}, confirm_code={'set' if confirm_code else 'EMPTY'}")
             return {**plain, "body": confirm_code or "ok"}
 
-        # Проверка секрета (если он задан в настройках Callback API).
         if secret_key and secret and secret != secret_key:
-            print(f"[vk-callback] secret mismatch: got_len={len(secret)} expected_len={len(secret_key)} match={secret == secret_key}")
             return {**plain, "body": "ok"}
 
         if not active:
             return {**plain, "body": "ok"}
 
-        if vk_type == "message_new":
-            obj = body.get("object") or {}
-            message = obj.get("message") or obj  # VK 5.199: object.message; старые: object
-            text = (message.get("text") or "").strip()
-            peer_id = message.get("peer_id") or message.get("from_id")
-            from_id = message.get("from_id")
+        if vk_type != "message_new":
+            return {**plain, "body": "ok"}
 
-            print(f"[vk-callback] message_new keys={list(message.keys())} text={bool(text)} peer_id={peer_id} from_id={from_id}")
+        obj = body.get("object") or {}
+        message = obj.get("message") or obj
+        text = (message.get("text") or "").strip()
+        peer_id = message.get("peer_id") or message.get("from_id")
+        from_id = message.get("from_id")
 
-            if not text or not peer_id or (from_id and from_id < 0):
-                print(f"[vk-callback] skip message_new: text={bool(text)} peer_id={peer_id} from_id={from_id}")
-                return {**plain, "body": "ok"}
+        if not text or not peer_id or (from_id and from_id < 0):
+            return {**plain, "body": "ok"}
 
-            # Автосбор заявки: если в сообщении есть телефон или email — сохраняем лид.
+        bot_id = int(bot_id)
+        from_id = int(from_id)
+        peer_id = int(peer_id)
+
+        scenario = load_scenario(cur, bot_id)
+        has_scenario = bool(scenario["nodes"])
+        session = get_session(cur, bot_id, from_id)
+
+        # Сбор email на нодах с collectEmail.
+        if session and session.get("awaiting_email"):
             contacts = extract_contacts(text)
             if contacts["email"] or contacts["phone"]:
                 try:
-                    save_lead(cur, conn, int(bot_id), int(from_id), access_token, contacts)
+                    save_lead(cur, conn, bot_id, from_id, access_token, contacts)
                 except Exception:
                     pass
+                save_session(cur, conn, bot_id, from_id, session["current_node_id"], False)
+                vk_send_message(access_token, peer_id, "Спасибо! Мы сохранили ваш контакт и скоро свяжемся.")
+                return {**plain, "body": "ok"}
 
-            cur.execute(
-                f"""SELECT prompt_bot_name, prompt_bot_role, prompt_persona, prompt_goal,
-                           prompt_tasks, prompt_context, prompt_instructions, prompt_constraints,
-                           prompt_traits, prompt_tone, prompt_address, prompt_examples
-                    FROM {SCHEMA}.bots WHERE id = {int(bot_id)} LIMIT 1"""
-            )
-            brow = cur.fetchone()
-            cols = ["prompt_bot_name", "prompt_bot_role", "prompt_persona", "prompt_goal",
-                    "prompt_tasks", "prompt_context", "prompt_instructions", "prompt_constraints",
-                    "prompt_traits", "prompt_tone", "prompt_address", "prompt_examples"]
-            bot = dict(zip(cols, brow)) if brow else {}
-
-            history = load_history(cur, int(bot_id), int(from_id))
-            history.append({"from": "user", "text": text})
-
-            try:
-                reply = call_ai(build_system_prompt(bot), history)
-            except Exception as e:
-                print(f"[vk-callback] AI error: {e}")
-                reply = "Извините, сейчас не могу ответить. Напишите чуть позже."
-
-            history.append({"from": "bot", "text": reply})
-            save_history(cur, conn, int(bot_id), int(from_id), history)
-
-            try:
-                vk_send_message(access_token, int(peer_id), reply)
-                print(f"[vk-callback] sent reply to peer_id={peer_id}")
-            except Exception as e:
-                print(f"[vk-callback] send error: {e}")
-
+        # Нет сценария — работаем через ИИ (как раньше).
+        if not has_scenario:
+            reply = ai_fallback(cur, bot_id, text)
+            vk_send_message(access_token, peer_id, reply)
             return {**plain, "body": "ok"}
 
+        text_lower = text.lower()
+        start_id = find_start_node(scenario)
+
+        # Старт диалога: первое сообщение, слова-триггеры или нет активной сессии.
+        if not session or not session.get("current_node_id") or text_lower in RESTART_WORDS:
+            node = scenario["nodes"].get(start_id)
+            r = render_node(node)
+            save_session(cur, conn, bot_id, from_id, start_id, node.get("collectEmail", False))
+            vk_send_message(access_token, peer_id, r["text"], r["buttons"])
+            return {**plain, "body": "ok"}
+
+        current_id = session["current_node_id"]
+        current_node = scenario["nodes"].get(current_id)
+        next_id = next_by_button(scenario, current_id, text)
+
+        # Кнопка не распознана.
+        if not next_id:
+            # Финальная нода с ИИ — отвечает помощник.
+            if current_node and current_node["type"] in ("gpt", "ai"):
+                reply = ai_fallback(cur, bot_id, text)
+                vk_send_message(access_token, peer_id, reply)
+                return {**plain, "body": "ok"}
+            r = render_node(current_node) if current_node else {"text": "Выберите один из вариантов ниже.", "buttons": []}
+            hint = "Пожалуйста, выберите вариант кнопкой ниже." if r["buttons"] else r["text"]
+            vk_send_message(access_token, peer_id, hint, r["buttons"])
+            return {**plain, "body": "ok"}
+
+        # Переход на следующую ноду.
+        next_node = scenario["nodes"].get(next_id)
+        r = render_node(next_node)
+        awaiting = next_node.get("collectEmail", False)
+        save_session(cur, conn, bot_id, from_id, next_id, awaiting)
+
+        if next_node["type"] in ("gpt", "ai"):
+            # Показать сообщение ноды и дальше отвечать ИИ.
+            vk_send_message(access_token, peer_id, r["text"], r["buttons"])
+            return {**plain, "body": "ok"}
+
+        vk_send_message(access_token, peer_id, r["text"], r["buttons"])
         return {**plain, "body": "ok"}
     finally:
         conn.close()
+
+
+def ai_fallback(cur, bot_id: int, user_text: str) -> str:
+    """Ответ через ИИ по персоне бота (используется в конце сценария или без сценария)."""
+    cur.execute(
+        f"""SELECT prompt_bot_name, prompt_bot_role, prompt_persona, prompt_goal,
+                   prompt_tasks, prompt_context, prompt_instructions, prompt_constraints,
+                   prompt_traits, prompt_tone, prompt_address, prompt_examples
+            FROM {SCHEMA}.bots WHERE id = {int(bot_id)} LIMIT 1"""
+    )
+    brow = cur.fetchone()
+    cols = ["prompt_bot_name", "prompt_bot_role", "prompt_persona", "prompt_goal",
+            "prompt_tasks", "prompt_context", "prompt_instructions", "prompt_constraints",
+            "prompt_traits", "prompt_tone", "prompt_address", "prompt_examples"]
+    bot = dict(zip(cols, brow)) if brow else {}
+    try:
+        return call_ai(build_system_prompt(bot), user_text)
+    except Exception:
+        return "Извините, сейчас не могу ответить. Напишите чуть позже."

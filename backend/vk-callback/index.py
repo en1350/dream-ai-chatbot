@@ -283,7 +283,10 @@ def handler(event: dict, context) -> dict:
             peer_id = message.get("peer_id") or message.get("from_id")
             from_id = message.get("from_id")
 
+            print(f"[vk-callback] message_new keys={list(message.keys())} text={bool(text)} peer_id={peer_id} from_id={from_id}")
+
             if not text or not peer_id or (from_id and from_id < 0):
+                print(f"[vk-callback] skip message_new: text={bool(text)} peer_id={peer_id} from_id={from_id}")
                 return {**plain, "body": "ok"}
 
             # Автосбор заявки: если в сообщении есть телефон или email — сохраняем лид.
@@ -311,7 +314,8 @@ def handler(event: dict, context) -> dict:
 
             try:
                 reply = call_ai(build_system_prompt(bot), history)
-            except Exception:
+            except Exception as e:
+                print(f"[vk-callback] AI error: {e}")
                 reply = "Извините, сейчас не могу ответить. Напишите чуть позже."
 
             history.append({"from": "bot", "text": reply})
@@ -319,8 +323,9 @@ def handler(event: dict, context) -> dict:
 
             try:
                 vk_send_message(access_token, int(peer_id), reply)
-            except Exception:
-                pass
+                print(f"[vk-callback] sent reply to peer_id={peer_id}")
+            except Exception as e:
+                print(f"[vk-callback] send error: {e}")
 
             return {**plain, "body": "ok"}
 

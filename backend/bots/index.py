@@ -14,6 +14,22 @@ def escape(value: str) -> str:
     return value.replace("'", "''")
 
 
+def get_user_id(cur, event) -> int:
+    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+    headers = event.get("headers") or {}
+    token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
+    if token:
+        cur.execute(
+            f"""SELECT user_id FROM {SCHEMA}.sessions
+                WHERE token = %s AND (expires_at IS NULL OR expires_at > now())""",
+            (token,),
+        )
+        row = cur.fetchone()
+        if row:
+            return int(row[0])
+    return DEFAULT_USER_ID
+
+
 def row_to_bot(row) -> dict:
     return {
         "id": row[0],
@@ -46,12 +62,13 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+        user_id = get_user_id(cur, event)
 
         if method == "GET":
             cur.execute(
                 f"""SELECT id, name, description, status, dialogs_count, created_at
                     FROM {SCHEMA}.bots
-                    WHERE user_id = {DEFAULT_USER_ID}
+                    WHERE user_id = {user_id}
                     ORDER BY created_at DESC"""
             )
             rows = cur.fetchall()
@@ -67,9 +84,30 @@ def handler(event: dict, context) -> dict:
             name = (body.get("name") or "Новый бот").strip()[:255]
             description = (body.get("description") or "").strip()
 
+            # Проверяем демо-период: если бесплатные 7 дней закончились без оплаты — блокируем.
+            cur.execute(
+                f"SELECT plan, plan_expires_at FROM {SCHEMA}.users WHERE id = {user_id}"
+            )
+            urow = cur.fetchone()
+            if urow:
+                u_plan = urow[0] or "demo"
+                u_expires = urow[1]
+                is_demo = u_plan in ("demo", "start")
+                if is_demo and u_expires is not None:
+                    from datetime import datetime as _dt
+                    if u_expires <= _dt.utcnow():
+                        return {
+                            "statusCode": 402,
+                            "headers": headers,
+                            "body": json.dumps({
+                                "error": "Бесплатный период закончился. Оплатите тариф, чтобы продолжить.",
+                                "requiresPayment": True,
+                            }),
+                        }
+
             cur.execute(
                 f"""INSERT INTO {SCHEMA}.bots (user_id, name, description, status, dialogs_count)
-                    VALUES ({DEFAULT_USER_ID}, '{escape(name)}', '{escape(description)}', 'inactive', 0)
+                    VALUES ({user_id}, '{escape(name)}', '{escape(description)}', 'inactive', 0)
                     RETURNING id, name, description, status, dialogs_count, created_at"""
             )
             row = cur.fetchone()
@@ -93,7 +131,7 @@ def handler(event: dict, context) -> dict:
             cur.execute(
                 f"""UPDATE {SCHEMA}.bots
                     SET status = '{status}', updated_at = now()
-                    WHERE id = {int(bot_id)} AND user_id = {DEFAULT_USER_ID}
+                    WHERE id = {int(bot_id)} AND user_id = {user_id}
                     RETURNING id, name, description, status, dialogs_count, created_at"""
             )
             row = cur.fetchone()
@@ -116,7 +154,7 @@ def handler(event: dict, context) -> dict:
             cur.execute(f"DELETE FROM {SCHEMA}.bot_edges WHERE bot_id = {bot_id}")
             cur.execute(f"DELETE FROM {SCHEMA}.bot_nodes WHERE bot_id = {bot_id}")
             cur.execute(
-                f"DELETE FROM {SCHEMA}.bots WHERE id = {bot_id} AND user_id = {DEFAULT_USER_ID}"
+                f"DELETE FROM {SCHEMA}.bots WHERE id = {bot_id} AND user_id = {user_id}"
             )
             if cur.rowcount == 0:
                 return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Bot not found"})}

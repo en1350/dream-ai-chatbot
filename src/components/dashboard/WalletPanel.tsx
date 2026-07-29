@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/icon";
 import func2url from "../../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 interface Tx {
   id: number;
@@ -40,7 +41,7 @@ export default function WalletPanel() {
   const [error, setError] = useState("");
 
   const load = () => {
-    fetch(func2url["wallet"])
+    apiFetch(func2url["wallet"])
       .then((res) => res.json())
       .then((d) => setData(d))
       .finally(() => setLoading(false));
@@ -58,7 +59,7 @@ export default function WalletPanel() {
       return;
     }
     setPaying(true);
-    fetch(func2url["wallet"], {
+    apiFetch(func2url["wallet"], {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "topup", amountKopecks, returnUrl: window.location.href }),

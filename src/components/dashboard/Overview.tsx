@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import func2url from "../../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 interface RealBot {
   id: number;
@@ -62,12 +63,12 @@ export default function Overview() {
   const [billing, setBilling] = useState<Billing | null>(null);
 
   useEffect(() => {
-    fetch(func2url["bots"])
+    apiFetch(func2url["bots"])
       .then((res) => res.json())
       .then((data) => setBots(data.bots || []))
       .finally(() => setBotsLoading(false));
 
-    fetch(`${func2url["events"]}?limit=8`)
+    apiFetch(`${func2url["events"]}?limit=8`)
       .then((res) => res.json())
       .then((data) => {
         setEvents(data.events || []);
@@ -75,7 +76,7 @@ export default function Overview() {
       })
       .finally(() => setEventsLoading(false));
 
-    fetch(func2url["billing"])
+    apiFetch(func2url["billing"])
       .then((res) => res.json())
       .then((data) => setBilling(data));
   }, []);

@@ -50,7 +50,7 @@ export default function Cabinet() {
 
   const loadBots = () => {
     setBotsLoading(true);
-    fetch(func2url["bots"])
+    apiFetch(func2url["bots"])
       .then((res) => res.json())
       .then((data) => setBots(data.bots || []))
       .finally(() => setBotsLoading(false));
@@ -59,7 +59,7 @@ export default function Cabinet() {
   useEffect(() => {
     if (!user) return;
     loadBots();
-    fetch(func2url["leads"])
+    apiFetch(func2url["leads"])
       .then((res) => res.json())
       .then((data) => setLeadsCount(data.total ?? (data.leads?.length || 0)))
       .catch(() => setLeadsCount(0));
@@ -78,7 +78,7 @@ export default function Cabinet() {
   const removeBot = (id: number) => {
     if (!confirm("Удалить бота? Действие необратимо.")) return;
     setDeletingId(id);
-    fetch(`${func2url["bots"]}?id=${id}`, { method: "DELETE" })
+    apiFetch(`${func2url["bots"]}?id=${id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setBots((list) => list.filter((b) => b.id !== id));

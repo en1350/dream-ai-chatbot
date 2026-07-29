@@ -44,7 +44,7 @@ const BotBuilder = () => {
 
   useEffect(() => {
     if (!realBotId || vkOpen) return;
-    fetch(func2url["vk-integration"])
+    apiFetch(func2url["vk-integration"])
       .then((res) => res.json())
       .then((data) => {
         const list = data.integrations || [];
@@ -89,7 +89,7 @@ const BotBuilder = () => {
   // Создание нового бота в БД или загрузка существующего сценария
   useEffect(() => {
     if (isNew) {
-      fetch(func2url["bots"], {
+      apiFetch(func2url["bots"], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "Новый бот", description: "" }),
@@ -111,7 +111,7 @@ const BotBuilder = () => {
       return;
     }
 
-    fetch(`${func2url["bot-scenario"]}?bot_id=${botId}`)
+    apiFetch(`${func2url["bot-scenario"]}?bot_id=${botId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -150,7 +150,7 @@ const BotBuilder = () => {
   const saveNow = useCallback(() => {
     if (!realBotId) return;
     setSaveStatus("saving");
-    fetch(func2url["bot-scenario"], {
+    apiFetch(func2url["bot-scenario"], {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ botId: realBotId, name: botName, nodes, edges }),
@@ -167,7 +167,7 @@ const BotBuilder = () => {
     const nextStatus = botStatus === "active" ? "inactive" : "active";
     setPublishing(true);
     setSaveStatus("saving");
-    fetch(func2url["bot-scenario"], {
+    apiFetch(func2url["bot-scenario"], {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ botId: realBotId, name: botName, nodes, edges }),
@@ -175,7 +175,7 @@ const BotBuilder = () => {
       .then((res) => res.json())
       .then((data) => {
         setSaveStatus(data.success ? "saved" : "error");
-        return fetch(func2url["bots"], {
+        return apiFetch(func2url["bots"], {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: realBotId, status: nextStatus }),
@@ -200,7 +200,7 @@ const BotBuilder = () => {
     setSaveStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      fetch(func2url["bot-scenario"], {
+      apiFetch(func2url["bot-scenario"], {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ botId: realBotId, name: botName, nodes, edges }),

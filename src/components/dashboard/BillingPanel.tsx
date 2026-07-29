@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/icon";
 import func2url from "../../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 interface Billing {
   planId: string;
@@ -51,7 +52,7 @@ export default function BillingPanel() {
   const [error, setError] = useState("");
 
   const load = () => {
-    fetch(func2url["billing"])
+    apiFetch(func2url["billing"])
       .then((res) => res.json())
       .then((data) => setBilling(data))
       .finally(() => setLoading(false));
@@ -64,7 +65,7 @@ export default function BillingPanel() {
   const choosePlan = (planId: string) => {
     setSwitching(planId);
     setError("");
-    fetch(func2url["billing"], {
+    apiFetch(func2url["billing"], {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan: planId }),

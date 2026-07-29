@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import func2url from "../../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 interface Bot {
   id: number;
@@ -28,7 +29,7 @@ export default function BotsList() {
   const [planName, setPlanName] = useState("");
 
   useEffect(() => {
-    fetch(func2url["bots"])
+    apiFetch(func2url["bots"])
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -40,11 +41,11 @@ export default function BotsList() {
       .catch(() => setError("Не удалось загрузить список ботов"))
       .finally(() => setLoading(false));
 
-    fetch(func2url["landings"])
+    apiFetch(func2url["landings"])
       .then((res) => res.json())
       .then((data) => setLandings(data.landings || []));
 
-    fetch(func2url["billing"])
+    apiFetch(func2url["billing"])
       .then((res) => res.json())
       .then((data) => {
         setMaxBots(data.usage?.bots?.max ?? null);
@@ -63,7 +64,7 @@ export default function BotsList() {
     const requests: Promise<unknown>[] = [];
     if (prevLanding && prevLanding.id !== landingId) {
       requests.push(
-        fetch(func2url["landings"], {
+        apiFetch(func2url["landings"], {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: prevLanding.id, botId: null }),
@@ -72,7 +73,7 @@ export default function BotsList() {
     }
     if (landingId) {
       requests.push(
-        fetch(func2url["landings"], {
+        apiFetch(func2url["landings"], {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: landingId, botId }),

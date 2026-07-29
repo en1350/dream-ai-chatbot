@@ -21,6 +21,22 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
+def get_user_id(cur, event) -> int:
+    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+    headers = event.get("headers") or {}
+    token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
+    if token:
+        cur.execute(
+            f"""SELECT user_id FROM {SCHEMA}.sessions
+                WHERE token = %s AND (expires_at IS NULL OR expires_at > now())""",
+            (token,),
+        )
+        row = cur.fetchone()
+        if row:
+            return int(row[0])
+    return DEFAULT_USER_ID
+
+
 def cors_headers():
     return {
         "Access-Control-Allow-Origin": "*",
@@ -78,12 +94,13 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+        user_id = get_user_id(cur, event)
 
         if method == "GET":
             cur.execute(
                 f"""SELECT id, amount_kopecks, kind, status, description, created_at
                     FROM {SCHEMA}.wallet_transactions
-                    WHERE user_id = {DEFAULT_USER_ID}
+                    WHERE user_id = {user_id}
                     ORDER BY created_at DESC LIMIT 30"""
             )
             rows = cur.fetchall()
@@ -98,7 +115,7 @@ def handler(event: dict, context) -> dict:
                 }
                 for r in rows
             ]
-            cur.execute(f"SELECT balance_kopecks FROM {SCHEMA}.users WHERE id = {DEFAULT_USER_ID}")
+            cur.execute(f"SELECT balance_kopecks FROM {SCHEMA}.users WHERE id = {user_id}")
             brow = cur.fetchone()
             balance = int(brow[0]) if brow and brow[0] is not None else 0
             return json_resp(200, {
@@ -121,7 +138,7 @@ def handler(event: dict, context) -> dict:
 
             action = body.get("action", "topup")
             if action == "topup":
-                return handle_topup(cur, conn, body)
+                return handle_topup(cur, conn, body, user_id)
 
             return json_resp(400, {"error": "Неизвестное действие"})
 
@@ -130,7 +147,7 @@ def handler(event: dict, context) -> dict:
         conn.close()
 
 
-def handle_topup(cur, conn, body):
+def handle_topup(cur, conn, body, user_id):
     amount = body.get("amountKopecks")
     if not isinstance(amount, int) or amount < MIN_TOPUP_KOPECKS:
         return json_resp(400, {"error": f"Минимальная сумма пополнения — {MIN_TOPUP_KOPECKS // 100} ₽"})
@@ -148,7 +165,7 @@ def handle_topup(cur, conn, body):
     cur.execute(
         f"""INSERT INTO {SCHEMA}.wallet_transactions
             (user_id, amount_kopecks, kind, status, description, provider, provider_payment_id)
-            VALUES ({DEFAULT_USER_ID}, {amount}, 'topup', 'pending', '{safe_desc}', 'yookassa', '{payment_id}')"""
+            VALUES ({user_id}, {amount}, 'topup', 'pending', '{safe_desc}', 'yookassa', '{payment_id}')"""
     )
     conn.commit()
     return json_resp(200, {"confirmationUrl": confirmation_url, "paymentId": payment_id})

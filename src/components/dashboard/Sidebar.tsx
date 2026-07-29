@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { useTheme } from "@/contexts/ThemeContext";
 import func2url from "../../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 const nav = [
   { id: "overview", label: "Обзор", icon: "LayoutDashboard" },
@@ -32,7 +33,7 @@ export default function Sidebar({ active, onSelect }: Props) {
   const nav2 = useNavigate();
 
   useEffect(() => {
-    fetch(func2url["billing"])
+    apiFetch(func2url["billing"])
       .then((res) => res.json())
       .then((data) => setPlanName(data.planName || "Демо"));
   }, []);

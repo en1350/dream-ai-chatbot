@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import func2url from "../../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 interface Integration {
   botId: number;
@@ -50,7 +51,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
 
   const load = () => {
     setLoading(true);
-    fetch(func2url["vk-integration"])
+    apiFetch(func2url["vk-integration"])
       .then((res) => res.json())
       .then((data) => {
         if (data.error) setError(data.error);
@@ -96,7 +97,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
     }
     setConnecting(true);
     setConnectError("");
-    fetch(func2url["vk-integration"], {
+    apiFetch(func2url["vk-integration"], {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ botId: modalBot.botId, groupId: groupId.trim(), accessToken: accessToken.trim(), confirmCode: confirmCode.trim() }),
@@ -116,7 +117,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
 
   const toggleActive = (item: Integration) => {
     setTogglingBotId(item.botId);
-    fetch(func2url["vk-integration"], {
+    apiFetch(func2url["vk-integration"], {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ botId: item.botId, active: !item.active }),
@@ -137,7 +138,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
       delete next[item.botId];
       return next;
     });
-    fetch(`${func2url["vk-integration"]}?action=check&bot_id=${item.botId}`)
+    apiFetch(`${func2url["vk-integration"]}?action=check&bot_id=${item.botId}`)
       .then((res) => res.json())
       .then((data) => {
         setCheckResult((prev) => ({ ...prev, [item.botId]: { status: data.status, dialogs: data.dialogs || 0, lastMessageAt: data.lastMessageAt || null } }));
@@ -149,7 +150,7 @@ export default function IntegrationsPanel({ onlyBotId, autoOpen }: PanelProps = 
   };
 
   const disconnect = (item: Integration) => {
-    fetch(`${func2url["vk-integration"]}?bot_id=${item.botId}`, { method: "DELETE" })
+    apiFetch(`${func2url["vk-integration"]}?bot_id=${item.botId}`, { method: "DELETE" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) load();

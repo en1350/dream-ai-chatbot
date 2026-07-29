@@ -11,6 +11,22 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
+def get_user_id(cur, event) -> int:
+    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+    headers = event.get("headers") or {}
+    token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
+    if token:
+        cur.execute(
+            f"""SELECT user_id FROM {SCHEMA}.sessions
+                WHERE token = %s AND (expires_at IS NULL OR expires_at > now())""",
+            (token,),
+        )
+        row = cur.fetchone()
+        if row:
+            return int(row[0])
+    return DEFAULT_USER_ID
+
+
 def escape(value: str) -> str:
     return (value or "").replace("'", "''")
 
@@ -65,6 +81,7 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+        user_id = get_user_id(cur, event)
 
         if method == "GET":
             landing_id = params.get("id")
@@ -73,13 +90,13 @@ def handler(event: dict, context) -> dict:
                     return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "Invalid id"})}
                 cur.execute(
                     f"""SELECT id, name, slug, blocks, theme, published, created_at, updated_at, bot_id
-                        FROM {SCHEMA}.landings WHERE id = {int(landing_id)} AND user_id = {DEFAULT_USER_ID}"""
+                        FROM {SCHEMA}.landings WHERE id = {int(landing_id)} AND user_id = {user_id}"""
                 )
                 row = cur.fetchone()
                 if not row:
                     return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Landing not found"})}
 
-                cur.execute(f"SELECT id, name FROM {SCHEMA}.bots WHERE user_id = {DEFAULT_USER_ID} ORDER BY created_at DESC")
+                cur.execute(f"SELECT id, name FROM {SCHEMA}.bots WHERE user_id = {user_id} ORDER BY created_at DESC")
                 bots = [{"id": b[0], "name": b[1]} for b in cur.fetchall()]
                 result = row_to_landing(row)
                 result["bots"] = bots
@@ -87,7 +104,7 @@ def handler(event: dict, context) -> dict:
 
             cur.execute(
                 f"""SELECT id, name, slug, blocks, theme, published, created_at, updated_at, bot_id
-                    FROM {SCHEMA}.landings WHERE user_id = {DEFAULT_USER_ID} ORDER BY created_at DESC"""
+                    FROM {SCHEMA}.landings WHERE user_id = {user_id} ORDER BY created_at DESC"""
             )
             rows = cur.fetchall()
             return {"statusCode": 200, "headers": headers, "body": json.dumps({"landings": [row_to_landing(r) for r in rows]})}
@@ -120,7 +137,7 @@ def handler(event: dict, context) -> dict:
 
             cur.execute(
                 f"""INSERT INTO {SCHEMA}.landings (user_id, name, slug, blocks, theme, published, bot_id)
-                    VALUES ({DEFAULT_USER_ID}, '{escape(name)}', '{escape(slug)}', '{escape(default_blocks)}'::jsonb, '{escape(default_theme)}'::jsonb, false, {bot_id_sql})
+                    VALUES ({user_id}, '{escape(name)}', '{escape(slug)}', '{escape(default_blocks)}'::jsonb, '{escape(default_theme)}'::jsonb, false, {bot_id_sql})
                     RETURNING id, name, slug, blocks, theme, published, created_at, updated_at, bot_id"""
             )
             row = cur.fetchone()
@@ -140,7 +157,7 @@ def handler(event: dict, context) -> dict:
 
             cur.execute(
                 f"""SELECT id, name, slug, blocks, theme, published, bot_id
-                    FROM {SCHEMA}.landings WHERE id = {landing_id} AND user_id = {DEFAULT_USER_ID}"""
+                    FROM {SCHEMA}.landings WHERE id = {landing_id} AND user_id = {user_id}"""
             )
             existing = cur.fetchone()
             if not existing:
@@ -178,7 +195,7 @@ def handler(event: dict, context) -> dict:
             landing_id = params.get("id")
             if not landing_id or not str(landing_id).isdigit():
                 return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "id is required"})}
-            cur.execute(f"DELETE FROM {SCHEMA}.landings WHERE id = {int(landing_id)} AND user_id = {DEFAULT_USER_ID}")
+            cur.execute(f"DELETE FROM {SCHEMA}.landings WHERE id = {int(landing_id)} AND user_id = {user_id}")
             conn.commit()
             return {"statusCode": 200, "headers": headers, "body": json.dumps({"success": True})}
 

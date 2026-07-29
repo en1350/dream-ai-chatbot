@@ -10,6 +10,22 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
+def get_user_id(cur, event) -> int:
+    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+    headers = event.get("headers") or {}
+    token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
+    if token:
+        cur.execute(
+            f"""SELECT user_id FROM {SCHEMA}.sessions
+                WHERE token = %s AND (expires_at IS NULL OR expires_at > now())""",
+            (token,),
+        )
+        row = cur.fetchone()
+        if row:
+            return int(row[0])
+    return DEFAULT_USER_ID
+
+
 def escape(value: str) -> str:
     return (value or "").replace("'", "''")
 
@@ -47,6 +63,7 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+        user_id = get_user_id(cur, event)
 
         if method == "GET":
             limit = params.get("limit", "10")
@@ -56,13 +73,13 @@ def handler(event: dict, context) -> dict:
             cur.execute(
                 f"""SELECT id, type, text, icon, color, created_at
                     FROM {SCHEMA}.events
-                    WHERE user_id = {DEFAULT_USER_ID}
+                    WHERE user_id = {user_id}
                     ORDER BY created_at DESC
                     LIMIT {limit}"""
             )
             rows = cur.fetchall()
 
-            cur.execute(f"SELECT COUNT(*) FROM {SCHEMA}.events WHERE user_id = {DEFAULT_USER_ID}")
+            cur.execute(f"SELECT COUNT(*) FROM {SCHEMA}.events WHERE user_id = {user_id}")
             total = cur.fetchone()[0]
 
             return {
@@ -87,7 +104,7 @@ def handler(event: dict, context) -> dict:
 
             cur.execute(
                 f"""INSERT INTO {SCHEMA}.events (user_id, type, text, icon, color)
-                    VALUES ({DEFAULT_USER_ID}, '{escape(event_type)}', '{escape(text)}', '{escape(icon)}', '{escape(color)}')
+                    VALUES ({user_id}, '{escape(event_type)}', '{escape(text)}', '{escape(icon)}', '{escape(color)}')
                     RETURNING id, type, text, icon, color, created_at"""
             )
             row = cur.fetchone()

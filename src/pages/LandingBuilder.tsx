@@ -8,6 +8,7 @@ import LandingRenderer from "@/components/landing-builder/LandingRenderer";
 import Icon from "@/components/ui/icon";
 import { LandingBlock, LandingTheme, DEFAULT_THEME } from "@/components/landing-builder/types";
 import func2url from "../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 type SaveStatus = "saved" | "saving" | "error";
 
@@ -34,7 +35,7 @@ const LandingBuilder = () => {
 
   useEffect(() => {
     if (isNew) {
-      fetch(func2url["landings"], {
+      apiFetch(func2url["landings"], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "Новый лендинг" }),
@@ -55,7 +56,7 @@ const LandingBuilder = () => {
       return;
     }
 
-    fetch(`${func2url["landings"]}?id=${landingId}`)
+    apiFetch(`${func2url["landings"]}?id=${landingId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -81,7 +82,7 @@ const LandingBuilder = () => {
     if (!realId) return;
     setSaveStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    fetch(func2url["landings"], {
+    apiFetch(func2url["landings"], {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: realId, name, slug, blocks, theme, published, botId }),
@@ -108,7 +109,7 @@ const LandingBuilder = () => {
     setSaveStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      fetch(func2url["landings"], {
+      apiFetch(func2url["landings"], {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: realId, name, slug, blocks, theme, published, botId }),

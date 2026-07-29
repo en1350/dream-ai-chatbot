@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import func2url from "../../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 interface Landing {
   id: number;
@@ -24,7 +25,7 @@ export default function LandingsList() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(func2url["landings"])
+    apiFetch(func2url["landings"])
       .then((res) => res.json())
       .then((data) => {
         if (data.error) {
@@ -36,7 +37,7 @@ export default function LandingsList() {
       .catch(() => setError("Не удалось загрузить список лендингов"))
       .finally(() => setLoading(false));
 
-    fetch(func2url["bots"])
+    apiFetch(func2url["bots"])
       .then((res) => res.json())
       .then((data) => setBots(data.bots || []));
   }, []);

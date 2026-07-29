@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/icon";
 import func2url from "../../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 interface Lead {
   id: number;
@@ -30,7 +31,7 @@ export default function LeadsList() {
 
   const load = () => {
     setLoading(true);
-    fetch(func2url["leads"])
+    apiFetch(func2url["leads"])
       .then((res) => res.json())
       .then((data) => {
         if (data.error) setError(data.error);
@@ -44,7 +45,7 @@ export default function LeadsList() {
 
   const remove = (id: number) => {
     setDeletingId(id);
-    fetch(`${func2url["leads"]}?id=${id}`, { method: "DELETE" })
+    apiFetch(`${func2url["leads"]}?id=${id}`, { method: "DELETE" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setLeads((ls) => ls.filter((l) => l.id !== id));

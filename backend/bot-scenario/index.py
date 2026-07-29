@@ -14,6 +14,22 @@ def escape(value: str) -> str:
     return (value or "").replace("'", "''")
 
 
+def get_user_id(cur, event) -> int:
+    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+    headers = event.get("headers") or {}
+    token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
+    if token:
+        cur.execute(
+            f"""SELECT user_id FROM {SCHEMA}.sessions
+                WHERE token = %s AND (expires_at IS NULL OR expires_at > now())""",
+            (token,),
+        )
+        row = cur.fetchone()
+        if row:
+            return int(row[0])
+    return DEFAULT_USER_ID
+
+
 def handler(event: dict, context) -> dict:
     """Загрузка и сохранение сценария бота (ноды + связи). GET ?bot_id=1 — получить, PUT — сохранить весь граф целиком."""
     method = event.get("httpMethod", "GET")
@@ -36,6 +52,7 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+        user_id = get_user_id(cur, event)
 
         if method == "GET":
             bot_id = params.get("bot_id")
@@ -44,7 +61,7 @@ def handler(event: dict, context) -> dict:
 
             cur.execute(
                 f"""SELECT id, name, description, status, dialogs_count
-                    FROM {SCHEMA}.bots WHERE id = {int(bot_id)} AND user_id = {DEFAULT_USER_ID}"""
+                    FROM {SCHEMA}.bots WHERE id = {int(bot_id)} AND user_id = {user_id}"""
             )
             bot_row = cur.fetchone()
             if not bot_row:
@@ -101,7 +118,7 @@ def handler(event: dict, context) -> dict:
                 return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "botId is required"})}
             bot_id = int(bot_id)
 
-            cur.execute(f"SELECT id FROM {SCHEMA}.bots WHERE id = {bot_id} AND user_id = {DEFAULT_USER_ID}")
+            cur.execute(f"SELECT id FROM {SCHEMA}.bots WHERE id = {bot_id} AND user_id = {user_id}")
             if not cur.fetchone():
                 return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Bot not found"})}
 

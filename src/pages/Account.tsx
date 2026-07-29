@@ -26,7 +26,7 @@ export default function Account() {
   } | null>(null);
 
   const loadBilling = () => {
-    fetch(func2url["billing"])
+    apiFetch(func2url["billing"])
       .then((res) => res.json())
       .then((data) => {
         setPlanId(data.planId ?? null);
@@ -35,7 +35,7 @@ export default function Account() {
         setDemoDaysLeft(data.demoDaysLeft ?? null);
       })
       .catch(() => {});
-    fetch(func2url["wallet"])
+    apiFetch(func2url["wallet"])
       .then((res) => res.json())
       .then((data) => {
         const tx = (data.transactions ?? []).find(
@@ -85,7 +85,7 @@ export default function Account() {
     }
     setSwitching(plan.id);
     try {
-      const res = await fetch(func2url["billing"], {
+      const res = await apiFetch(func2url["billing"], {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: plan.id }),

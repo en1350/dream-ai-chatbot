@@ -10,6 +10,22 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
+def get_user_id(cur, event) -> int:
+    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+    headers = event.get("headers") or {}
+    token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
+    if token:
+        cur.execute(
+            f"""SELECT user_id FROM {SCHEMA}.sessions
+                WHERE token = %s AND (expires_at IS NULL OR expires_at > now())""",
+            (token,),
+        )
+        row = cur.fetchone()
+        if row:
+            return int(row[0])
+    return DEFAULT_USER_ID
+
+
 def row_to_lead(row) -> dict:
     extra = row[9] if isinstance(row[9], dict) else {}
     email = row[5] or ""
@@ -52,6 +68,7 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+        user_id = get_user_id(cur, event)
 
         if method == "GET":
             cur.execute(
@@ -59,7 +76,7 @@ def handler(event: dict, context) -> dict:
                     FROM {SCHEMA}.leads l
                     LEFT JOIN {SCHEMA}.bots b ON b.id = l.bot_id
                     LEFT JOIN {SCHEMA}.landings ld ON ld.id = l.landing_id
-                    WHERE b.user_id = {DEFAULT_USER_ID} OR ld.user_id = {DEFAULT_USER_ID}
+                    WHERE b.user_id = {user_id} OR ld.user_id = {user_id}
                     ORDER BY l.created_at DESC"""
             )
             rows = cur.fetchall()
@@ -74,8 +91,8 @@ def handler(event: dict, context) -> dict:
                 f"""DELETE FROM {SCHEMA}.leads l
                     USING {SCHEMA}.bots b, {SCHEMA}.landings ld
                     WHERE l.id = {int(lead_id)}
-                    AND (l.bot_id = b.id AND b.user_id = {DEFAULT_USER_ID}
-                         OR l.landing_id = ld.id AND ld.user_id = {DEFAULT_USER_ID})"""
+                    AND (l.bot_id = b.id AND b.user_id = {user_id}
+                         OR l.landing_id = ld.id AND ld.user_id = {user_id})"""
             )
             conn.commit()
             return {"statusCode": 200, "headers": headers, "body": json.dumps({"success": True})}

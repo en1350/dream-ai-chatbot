@@ -271,6 +271,7 @@ def handler(event: dict, context) -> dict:
 
         # Проверка секрета (если он задан в настройках Callback API).
         if secret_key and secret and secret != secret_key:
+            print(f"[vk-callback] secret mismatch: got_len={len(secret)} expected_len={len(secret_key)} match={secret == secret_key}")
             return {**plain, "body": "ok"}
 
         if not active:

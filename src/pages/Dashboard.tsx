@@ -9,6 +9,7 @@ import LeadsList from "@/components/dashboard/LeadsList";
 import BillingPanel from "@/components/dashboard/BillingPanel";
 import WalletPanel from "@/components/dashboard/WalletPanel";
 import Icon from "@/components/ui/icon";
+import AccountBanners from "@/components/AccountBanners";
 
 const stubs: Record<string, { title: string; icon: string; text: string }> = {
   analytics: { title: "Аналитика", icon: "BarChart3", text: "Воронки и статистика диалогов" },
@@ -26,6 +27,7 @@ const Dashboard = () => {
       <Sidebar active={active} onSelect={setActive} />
       <main className="pl-[68px]">
         <div className="max-w-7xl mx-auto px-6 md:px-10 py-8">
+          <AccountBanners />
           {active === "overview" ? (
             <Overview />
           ) : active === "bots" ? (

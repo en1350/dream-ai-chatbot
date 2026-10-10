@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/contexts/AuthContext";
+import AccountBanners from "@/components/AccountBanners";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -201,6 +202,7 @@ export default function Cabinet() {
 
         {/* Основная область */}
         <main className="p-6 md:p-8 max-w-6xl">
+          <AccountBanners />
           <div className="mb-8">
             <h1 className="font-display text-3xl text-white">Добро пожаловать, {user.name}!</h1>
             <p className="text-white/50 text-sm mt-1">

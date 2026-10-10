@@ -55,6 +55,9 @@ def verify_password(password: str, stored: str) -> bool:
     return secrets.compare_digest(hash_password(password, salt), digest)
 
 
+USER_COLS = "id, email, name, plan, created_at, email_verified"
+
+
 def user_to_dict(row) -> dict:
     return {
         "id": row[0],
@@ -62,7 +65,52 @@ def user_to_dict(row) -> dict:
         "name": row[2],
         "plan": normalize_plan(row[3]),
         "createdAt": row[4].isoformat() if row[4] else None,
+        "emailVerified": bool(row[5]) if len(row) > 5 else True,
     }
+
+
+def send_mail(to_email: str, subject: str, html: str) -> bool:
+    if not SMTPBZ_API_KEY:
+        print("[smtp.bz] нет ключа SMTPBZ_API_KEY")
+        return False
+    payload = urllib.parse.urlencode(
+        {"from": MAIL_FROM, "name": MAIL_FROM_NAME, "subject": subject, "to": to_email, "html": html}
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.smtp.bz/v1/smtp/send",
+        data=payload,
+        headers={"Authorization": SMTPBZ_API_KEY, "Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            print(f"[smtp.bz] status={r.status} body={r.read(500)}")
+            return 200 <= r.status < 300
+    except urllib.error.HTTPError as e:
+        print(f"[smtp.bz] HTTPError status={e.code} body={e.read(500)}")
+        return False
+    except Exception as e:
+        print(f"[smtp.bz] error: {e}")
+        return False
+
+
+def send_verify_email(to_email: str, name: str, verify_url: str) -> bool:
+    html = f"""
+    <div style="font-family: -apple-system, Segoe UI, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #1a1a1a;">
+      <h2 style="color: #2B7FFF;">Подтвердите email</h2>
+      <p>Здравствуйте, {name}!</p>
+      <p>Спасибо за регистрацию в «БотВПотоке». Вам доступно <b>7 дней бесплатно</b>. Подтвердите адрес почты, нажав на кнопку:</p>
+      <p style="text-align: center; margin: 28px 0;">
+        <a href="{verify_url}" style="display: inline-block; background: #2B7FFF; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: 600;">Подтвердить email</a>
+      </p>
+      <p style="color: #666; font-size: 13px;">Если вы не регистрировались — просто проигнорируйте это письмо.</p>
+    </div>
+    """
+    return send_mail(to_email, "Подтвердите email — БотВПотоке", html)
+
+
+def base_url(origin: str) -> str:
+    return origin.rstrip("/") if origin.startswith("http") else "https://bot-flow.ru"
 
 
 def resp(status: int, body: dict) -> dict:
@@ -112,7 +160,7 @@ def send_reset_email(to_email: str, name: str, reset_url: str) -> bool:
 
 def get_user_by_token(cur, token: str):
     cur.execute(
-        f"""SELECT u.id, u.email, u.name, u.plan, u.created_at
+        f"""SELECT u.id, u.email, u.name, u.plan, u.created_at, u.email_verified
             FROM {SCHEMA}.sessions s
             JOIN {SCHEMA}.users u ON u.id = s.user_id
             WHERE s.token = %s AND (s.expires_at IS NULL OR s.expires_at > now())""",
@@ -163,11 +211,17 @@ def handler(event: dict, context) -> dict:
                 if cur.fetchone():
                     return resp(409, {"error": "Пользователь с таким email уже существует"})
 
+                verify_token = secrets.token_hex(32)
                 cur.execute(
-                    f"""INSERT INTO {SCHEMA}.users (email, password_hash, name, plan)
-                        VALUES (%s, %s, %s, 'demo')
-                        RETURNING id, email, name, plan, created_at""",
-                    (email, make_stored_hash(password), name),
+                    f"""INSERT INTO {SCHEMA}.users
+                            (email, password_hash, name, plan, balance_kopecks,
+                             demo_started_at, plan_expires_at,
+                             email_verified, email_verify_token, email_verify_sent_at)
+                        VALUES (%s, %s, %s, 'demo', 0,
+                                now(), now() + interval '7 days',
+                                FALSE, %s, now())
+                        RETURNING {USER_COLS}""",
+                    (email, make_stored_hash(password), name, verify_token),
                 )
                 user_row = cur.fetchone()
                 new_token = secrets.token_hex(32)
@@ -176,17 +230,61 @@ def handler(event: dict, context) -> dict:
                     (user_row[0], new_token),
                 )
                 conn.commit()
+                send_verify_email(email, name, f"{base_url(origin)}/verify-email?token={verify_token}")
                 return resp(200, {"token": new_token, "user": user_to_dict(user_row)})
+
+            if action == "verify":
+                vtoken = (body.get("token") or params.get("token") or "").strip()
+                if not vtoken:
+                    return resp(400, {"error": "Ссылка недействительна"})
+                cur.execute(
+                    f"""UPDATE {SCHEMA}.users
+                        SET email_verified = TRUE, email_verify_token = NULL
+                        WHERE email_verify_token = %s
+                        RETURNING {USER_COLS}""",
+                    (vtoken,),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return resp(400, {"error": "Ссылка недействительна или уже использована"})
+                conn.commit()
+                return resp(200, {"success": True, "user": user_to_dict(row)})
+
+            if action == "resend":
+                if not token:
+                    return resp(401, {"error": "Требуется авторизация"})
+                user = get_user_by_token(cur, token)
+                if not user:
+                    return resp(401, {"error": "Сессия недействительна"})
+                if user[5]:
+                    return resp(200, {"success": True, "alreadyVerified": True})
+                cur.execute(
+                    f"SELECT email_verify_sent_at > now() - interval '1 minute' FROM {SCHEMA}.users WHERE id = %s",
+                    (user[0],),
+                )
+                recent = cur.fetchone()
+                if recent and recent[0]:
+                    return resp(429, {"error": "Письмо уже отправлено. Повторить можно через минуту."})
+                verify_token = secrets.token_hex(32)
+                cur.execute(
+                    f"UPDATE {SCHEMA}.users SET email_verify_token = %s, email_verify_sent_at = now() WHERE id = %s",
+                    (verify_token, user[0]),
+                )
+                conn.commit()
+                sent = send_verify_email(user[1], user[2], f"{base_url(origin)}/verify-email?token={verify_token}")
+                if not sent:
+                    return resp(502, {"error": "Не удалось отправить письмо. Попробуйте позже."})
+                return resp(200, {"success": True})
 
             if action == "login":
                 email = (body.get("email") or "").strip().lower()
                 password = body.get("password") or ""
                 cur.execute(
-                    f"SELECT id, email, name, plan, created_at, password_hash FROM {SCHEMA}.users WHERE email = %s",
+                    f"SELECT {USER_COLS}, password_hash FROM {SCHEMA}.users WHERE email = %s",
                     (email,),
                 )
                 row = cur.fetchone()
-                if not row or not verify_password(password, row[5]):
+                if not row or not verify_password(password, row[6]):
                     return resp(401, {"error": "Неверный email или пароль"})
                 new_token = secrets.token_hex(32)
                 cur.execute(
@@ -194,7 +292,7 @@ def handler(event: dict, context) -> dict:
                     (row[0], new_token),
                 )
                 conn.commit()
-                return resp(200, {"token": new_token, "user": user_to_dict(row[:5])})
+                return resp(200, {"token": new_token, "user": user_to_dict(row[:6])})
 
             if action == "forgot":
                 email = (body.get("email") or "").strip().lower()
@@ -259,7 +357,7 @@ def handler(event: dict, context) -> dict:
             if plan not in PLANS:
                 return resp(400, {"error": "Неизвестный тариф"})
             cur.execute(
-                f"UPDATE {SCHEMA}.users SET plan = %s WHERE id = %s RETURNING id, email, name, plan, created_at",
+                f"UPDATE {SCHEMA}.users SET plan = %s WHERE id = %s RETURNING {USER_COLS}",
                 (plan, user[0]),
             )
             updated = cur.fetchone()

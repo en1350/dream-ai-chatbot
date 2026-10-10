@@ -11,6 +11,7 @@ export interface User {
   name: string;
   plan: PlanId;
   createdAt: string | null;
+  emailVerified?: boolean;
 }
 
 interface AuthCtx {
@@ -23,6 +24,8 @@ interface AuthCtx {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
   deleteAccount: () => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
+  resendVerification: () => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -133,9 +136,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!res.ok) throw new Error(data.error || "Не удалось сменить пароль");
   };
 
+  const verifyEmail = async (verifyToken: string) => {
+    const res = await fetch(`${AUTH_URL}?action=verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: verifyToken }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Не удалось подтвердить email");
+    if (user && data.user && user.id === data.user.id) setUser(data.user);
+    else if (getToken()) loadProfile();
+  };
+
+  const resendVerification = async () => {
+    const token = getToken();
+    if (!token) throw new Error("Требуется авторизация");
+    const res = await fetch(`${AUTH_URL}?action=resend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Auth-Token": token },
+      body: JSON.stringify({}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Не удалось отправить письмо");
+    if (data.alreadyVerified) loadProfile();
+  };
+
   return (
     <Ctx.Provider
-      value={{ user, loading, register, login, logout, changePlan, forgotPassword, resetPassword, deleteAccount }}
+      value={{
+        user, loading, register, login, logout, changePlan, forgotPassword, resetPassword, deleteAccount,
+        verifyEmail, resendVerification,
+      }}
     >
       {children}
     </Ctx.Provider>

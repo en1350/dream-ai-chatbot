@@ -54,6 +54,22 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
+def get_user_id(cur, event) -> int:
+    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+    headers = event.get("headers") or {}
+    token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
+    if token:
+        cur.execute(
+            f"""SELECT user_id FROM {SCHEMA}.sessions
+                WHERE token = %s AND (expires_at IS NULL OR expires_at > now())""",
+            (token,),
+        )
+        row = cur.fetchone()
+        if row:
+            return int(row[0])
+    return DEFAULT_USER_ID
+
+
 def normalize_plan(raw):
     if raw in PLANS:
         return raw
@@ -101,10 +117,11 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+        user_id = get_user_id(cur, event)
 
         if method == "GET":
             cur.execute(
-                f"SELECT plan, balance_kopecks, plan_expires_at, demo_started_at FROM {SCHEMA}.users WHERE id = {DEFAULT_USER_ID}"
+                f"SELECT plan, balance_kopecks, plan_expires_at, demo_started_at FROM {SCHEMA}.users WHERE id = {user_id}"
             )
             row = cur.fetchone()
             plan_id = normalize_plan(row[0] if row else "demo")
@@ -113,7 +130,7 @@ def handler(event: dict, context) -> dict:
             plan = PLANS[plan_id]
 
             cur.execute(
-                f"SELECT COUNT(*), COALESCE(SUM(dialogs_count), 0) FROM {SCHEMA}.bots WHERE user_id = {DEFAULT_USER_ID}"
+                f"SELECT COUNT(*), COALESCE(SUM(dialogs_count), 0) FROM {SCHEMA}.bots WHERE user_id = {user_id}"
             )
             bots_count, dialogs_sum = cur.fetchone()
 
@@ -121,6 +138,8 @@ def handler(event: dict, context) -> dict:
             if plan.get("demo") and plan_expires_at:
                 delta = plan_expires_at - datetime.utcnow()
                 demo_days_left = max(0, delta.days + (1 if delta.seconds > 0 else 0))
+
+            blocked = bool(plan_expires_at) and plan_expires_at <= datetime.utcnow()
 
             return {
                 "statusCode": 200,
@@ -131,11 +150,13 @@ def handler(event: dict, context) -> dict:
                     "balanceKopecks": balance,
                     "planExpiresAt": plan_expires_at.isoformat() if plan_expires_at else None,
                     "demoDaysLeft": demo_days_left,
+                    "blocked": blocked,
+                    "requiresPayment": blocked,
                     "usage": {
                         "bots": {"current": bots_count, "max": plan["maxBots"]},
                         "dialogs": {"current": dialogs_sum, "max": plan["maxDialogs"]},
                     },
-                    "aiEnabled": plan["aiEnabled"],
+                    "aiEnabled": plan["aiEnabled"] and not blocked,
                     "plans": plans_public(),
                 }),
             }
@@ -152,20 +173,27 @@ def handler(event: dict, context) -> dict:
 
             plan = PLANS[plan_id]
 
-            cur.execute(f"SELECT balance_kopecks FROM {SCHEMA}.users WHERE id = {DEFAULT_USER_ID}")
+            cur.execute(f"SELECT balance_kopecks, demo_started_at FROM {SCHEMA}.users WHERE id = {user_id}")
             brow = cur.fetchone()
             balance = int(brow[0]) if brow and brow[0] is not None else 0
+            demo_used = bool(brow and brow[1])
 
             price = plan["priceKopecks"]
 
             if plan.get("demo"):
-                # Демо активируется бесплатно на demoDays дней.
+                # 7 бесплатных дней даются только один раз — при регистрации.
+                if demo_used:
+                    return {
+                        "statusCode": 403,
+                        "headers": headers,
+                        "body": json.dumps({"error": "Бесплатный период уже использован. Выберите платный тариф."}),
+                    }
                 expires = datetime.utcnow() + timedelta(days=plan["demoDays"])
                 cur.execute(
                     f"""UPDATE {SCHEMA}.users
                         SET plan = '{plan_id}', plan_expires_at = '{expires.isoformat()}',
-                            demo_started_at = COALESCE(demo_started_at, now())
-                        WHERE id = {DEFAULT_USER_ID}"""
+                            demo_started_at = now()
+                        WHERE id = {user_id}"""
                 )
                 conn.commit()
                 return {
@@ -191,13 +219,13 @@ def handler(event: dict, context) -> dict:
                 f"""UPDATE {SCHEMA}.users
                     SET plan = '{plan_id}', balance_kopecks = {new_balance},
                         plan_expires_at = '{expires.isoformat()}'
-                    WHERE id = {DEFAULT_USER_ID}"""
+                    WHERE id = {user_id}"""
             )
             desc = f"Оплата тарифа «{plan['name']}»".replace("'", "''")
             cur.execute(
                 f"""INSERT INTO {SCHEMA}.wallet_transactions
                     (user_id, amount_kopecks, kind, status, description, provider)
-                    VALUES ({DEFAULT_USER_ID}, {-price}, 'plan', 'succeeded', '{desc}', 'wallet')"""
+                    VALUES ({user_id}, {-price}, 'plan', 'succeeded', '{desc}', 'wallet')"""
             )
             conn.commit()
             return {

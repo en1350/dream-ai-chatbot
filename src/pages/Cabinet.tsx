@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import func2url from "../../backend/func2url.json";
 import { apiFetch } from "@/lib/api";
+import { CreateBotDialog, DeleteBotDialog } from "@/components/cabinet/BotDialogs";
+import { toast } from "sonner";
 
 interface Bot {
   id: number;
@@ -44,7 +46,9 @@ export default function Cabinet() {
   const [leadsCount, setLeadsCount] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [activeNav, setActiveNav] = useState("bots");
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [botLimit, setBotLimit] = useState<number | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [toDelete, setToDelete] = useState<Bot | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate("/login", { replace: true });
@@ -54,8 +58,46 @@ export default function Cabinet() {
     setBotsLoading(true);
     apiFetch(func2url["bots"])
       .then((res) => res.json())
-      .then((data) => setBots(data.bots || []))
+      .then((data) => {
+        setBots(data.bots || []);
+        setBotLimit(typeof data.limit === "number" ? data.limit : null);
+      })
       .finally(() => setBotsLoading(false));
+  };
+
+  const createBot = async (name: string) => {
+    try {
+      const res = await apiFetch(func2url["bots"], {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description: "" }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.bot) {
+        return {
+          error: data.error || "Не удалось создать бота",
+          needUpgrade: !!(data.limitReached || data.requiresPayment),
+        };
+      }
+      setCreateOpen(false);
+      toast.success(`Бот «${data.bot.name}» создан`);
+      navigate(`/builder/${data.bot.id}`);
+    } catch {
+      return { error: "Нет связи с сервером. Попробуйте ещё раз." };
+    }
+  };
+
+  const deleteBot = async (id: number) => {
+    try {
+      const res = await apiFetch(`${func2url["bots"]}?id=${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Не удалось удалить бота");
+      setBots((list) => list.filter((b) => b.id !== id));
+      setToDelete(null);
+      toast.success("Бот удалён");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Не удалось удалить бота");
+    }
   };
 
   useEffect(() => {
@@ -76,17 +118,6 @@ export default function Cabinet() {
     () => bots.filter((b) => b.name.toLowerCase().includes(search.toLowerCase().trim())),
     [bots, search],
   );
-
-  const removeBot = (id: number) => {
-    if (!confirm("Удалить бота? Действие необратимо.")) return;
-    setDeletingId(id);
-    apiFetch(`${func2url["bots"]}?id=${id}`, { method: "DELETE" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setBots((list) => list.filter((b) => b.id !== id));
-      })
-      .finally(() => setDeletingId(null));
-  };
 
   if (loading || !user) {
     return (
@@ -246,10 +277,19 @@ export default function Cabinet() {
           </div>
 
           {/* Боты */}
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="font-display text-2xl text-white">Мои боты</h2>
+          <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+            <div>
+              <h2 className="font-display text-2xl text-white">Мои боты</h2>
+              {!botsLoading && (
+                <p className="text-xs text-white/45 mt-0.5">
+                  {botLimit === null
+                    ? `${bots.length} · без ограничений`
+                    : `${bots.length} из ${botLimit} по вашему тарифу`}
+                </p>
+              )}
+            </div>
             <button
-              onClick={() => navigate("/builder/new")}
+              onClick={() => setCreateOpen(true)}
               className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-electric to-aqua text-ink font-semibold text-sm hover:shadow-[0_0_30px_rgba(43,127,255,0.4)] transition-all"
             >
               <Icon name="Plus" size={18} /> Создать нового бота
@@ -277,7 +317,7 @@ export default function Cabinet() {
               </p>
               {!search && (
                 <button
-                  onClick={() => navigate("/builder/new")}
+                  onClick={() => setCreateOpen(true)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-electric to-aqua text-ink font-semibold text-sm hover:shadow-[0_0_30px_rgba(43,127,255,0.4)] transition-all"
                 >
                   <Icon name="Plus" size={18} /> Создать нового бота
@@ -326,12 +366,11 @@ export default function Cabinet() {
                         <Icon name="BarChart3" size={15} />
                       </button>
                       <button
-                        onClick={() => removeBot(b.id)}
-                        disabled={deletingId === b.id}
-                        title="Удалить"
-                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-50"
+                        onClick={() => setToDelete(b)}
+                        title="Удалить бота"
+                        className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
                       >
-                        <Icon name={deletingId === b.id ? "LoaderCircle" : "Trash2"} size={15} className={deletingId === b.id ? "animate-spin" : ""} />
+                        <Icon name="Trash2" size={15} />
                       </button>
                     </div>
                   </div>
@@ -341,6 +380,9 @@ export default function Cabinet() {
           )}
         </main>
       </div>
+
+      <CreateBotDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={createBot} />
+      <DeleteBotDialog bot={toDelete} onOpenChange={(o) => !o && setToDelete(null)} onConfirm={deleteBot} />
     </div>
   );
 }

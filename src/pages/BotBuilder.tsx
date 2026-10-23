@@ -100,6 +100,8 @@ const BotBuilder = () => {
           if (data.bot) {
             setRealBotId(data.bot.id);
             navigate(`/builder/${data.bot.id}`, { replace: true });
+          } else {
+            setLoadError(data.error || "Не удалось создать бота");
           }
         })
         .catch(() => setLoadError("Не удалось создать бота"));

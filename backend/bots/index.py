@@ -1,8 +1,14 @@
 import json
 import os
+from datetime import datetime
+
 import psycopg2
 
 SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
+
+PLAN_ALIASES = {None: "demo", "start": "demo", "business": "standard", "agency": "pro"}
+BOT_LIMITS = {"demo": 1, "standard": 5, "pro": None}
+PLAN_NAMES = {"demo": "Демо", "standard": "Стандарт", "pro": "Профи"}
 
 
 def get_conn():
@@ -41,7 +47,7 @@ def row_to_bot(row) -> dict:
 
 
 def handler(event: dict, context) -> dict:
-    """Боты пользователя. GET — список, POST — создать (name, description), PUT — сменить статус публикации (id, status)."""
+    """Боты пользователя. GET — список и лимит тарифа, POST — создать (с проверкой срока и лимита тарифа), PUT — статус публикации, DELETE ?id= — удалить бота со всеми данными."""
     method = event.get("httpMethod", "GET")
 
     if method == "OPTIONS":
@@ -74,7 +80,20 @@ def handler(event: dict, context) -> dict:
             )
             rows = cur.fetchall()
             bots = [row_to_bot(r) for r in rows]
-            return {"statusCode": 200, "headers": headers, "body": json.dumps({"bots": bots})}
+            cur.execute(f"SELECT plan, plan_expires_at FROM {SCHEMA}.users WHERE id = {user_id}")
+            urow = cur.fetchone()
+            u_plan = PLAN_ALIASES.get(urow[0] if urow else None, urow[0] if urow else "demo")
+            expired = bool(urow and urow[1] is not None and urow[1] <= datetime.utcnow())
+            return {
+                "statusCode": 200,
+                "headers": headers,
+                "body": json.dumps({
+                    "bots": bots,
+                    "limit": BOT_LIMITS.get(u_plan),
+                    "plan": u_plan,
+                    "expired": expired,
+                }),
+            }
 
         if method == "POST":
             try:
@@ -85,26 +104,45 @@ def handler(event: dict, context) -> dict:
             name = (body.get("name") or "Новый бот").strip()[:255]
             description = (body.get("description") or "").strip()
 
-            # Проверяем демо-период: если бесплатные 7 дней закончились без оплаты — блокируем.
+            if not name:
+                name = "Новый бот"
+
             cur.execute(
                 f"SELECT plan, plan_expires_at FROM {SCHEMA}.users WHERE id = {user_id}"
             )
             urow = cur.fetchone()
-            if urow:
-                u_plan = urow[0] or "demo"
-                u_expires = urow[1]
-                is_demo = u_plan in ("demo", "start")
-                if is_demo and u_expires is not None:
-                    from datetime import datetime as _dt
-                    if u_expires <= _dt.utcnow():
-                        return {
-                            "statusCode": 402,
-                            "headers": headers,
-                            "body": json.dumps({
-                                "error": "Бесплатный период закончился. Оплатите тариф, чтобы продолжить.",
-                                "requiresPayment": True,
-                            }),
-                        }
+            u_plan = PLAN_ALIASES.get(urow[0] if urow else None, urow[0] if urow else "demo")
+            u_expires = urow[1] if urow else None
+
+            # Срок доступа истёк (пробный или оплаченный) — создавать нельзя.
+            if u_expires is not None and u_expires <= datetime.utcnow():
+                msg = (
+                    "Бесплатный период закончился. Оплатите тариф, чтобы продолжить."
+                    if u_plan == "demo"
+                    else "Срок действия тарифа закончился. Продлите тариф, чтобы создавать ботов."
+                )
+                return {
+                    "statusCode": 402,
+                    "headers": headers,
+                    "body": json.dumps({"error": msg, "requiresPayment": True}),
+                }
+
+            # Лимит ботов по тарифу.
+            limit = BOT_LIMITS.get(u_plan)
+            if limit is not None:
+                cur.execute(f"SELECT COUNT(*) FROM {SCHEMA}.bots WHERE user_id = {user_id}")
+                count = cur.fetchone()[0]
+                if count >= limit:
+                    return {
+                        "statusCode": 403,
+                        "headers": headers,
+                        "body": json.dumps({
+                            "error": f"На тарифе «{PLAN_NAMES.get(u_plan, u_plan)}» можно создать до {limit} "
+                                     f"{'бота' if limit == 1 else 'ботов'}. Удалите ненужного бота или перейдите на тариф выше.",
+                            "limitReached": True,
+                            "limit": limit,
+                        }),
+                    }
 
             cur.execute(
                 f"""INSERT INTO {SCHEMA}.bots (user_id, name, description, status, dialogs_count)
@@ -147,6 +185,10 @@ def handler(event: dict, context) -> dict:
             if not bot_id or not str(bot_id).isdigit():
                 return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "id is required"})}
             bot_id = int(bot_id)
+            # Сначала убеждаемся, что бот принадлежит этому клиенту.
+            cur.execute(f"SELECT id FROM {SCHEMA}.bots WHERE id = {bot_id} AND user_id = {user_id}")
+            if not cur.fetchone():
+                return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Бот не найден"})}
             # Удаляем связанные записи, затем самого бота.
             cur.execute(f"DELETE FROM {SCHEMA}.vk_integrations WHERE bot_id = {bot_id}")
             cur.execute(f"DELETE FROM {SCHEMA}.vk_sessions WHERE bot_id = {bot_id}")

@@ -12,6 +12,7 @@ import Icon from "@/components/ui/icon";
 import { BotNode, BotEdge, NodeCategory } from "@/components/builder/types";
 import { NODE_DEF_MAP } from "@/components/builder/nodeDefs";
 import func2url from "../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 let idCounter = 100;
 const uid = () => `n${idCounter++}`;

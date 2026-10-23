@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import func2url from "../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 
 interface Bot {
   id: number;

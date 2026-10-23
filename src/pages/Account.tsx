@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { PLANS, type PlanId } from "@/lib/plans";
 import func2url from "../../backend/func2url.json";
+import { apiFetch } from "@/lib/api";
 import Icon from "@/components/ui/icon";
 import { toast } from "sonner";
 

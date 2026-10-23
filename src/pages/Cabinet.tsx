@@ -27,7 +27,7 @@ const NAV = [
   { id: "analytics", label: "Аналитика", icon: "BarChart3", to: "/dashboard" },
   { id: "api", label: "API-ключи", icon: "KeyRound", to: "/cabinet" },
   { id: "billing", label: "Тарифы", icon: "CreditCard", to: "/account" },
-  { id: "settings", label: "Настройки", icon: "Settings", to: "/cabinet" },
+  { id: "profile", label: "Мой профиль", icon: "User", to: "/profile" },
 ];
 
 function formatDate(iso: string | null): string {
@@ -131,6 +131,15 @@ export default function Cabinet() {
               {item.label}
             </button>
           ))}
+          {user.isAdmin && (
+            <button
+              onClick={() => navigate("/admin")}
+              className="flex items-center gap-3 w-full h-11 px-3.5 rounded-xl transition-colors text-sm text-white/55 hover:text-white hover:bg-white/5"
+            >
+              <Icon name="ShieldCheck" size={19} className="text-aqua" />
+              Админка
+            </button>
+          )}
         </nav>
 
         <div className="mt-auto rounded-xl border border-white/10 bg-white/[0.03] p-3.5">
@@ -183,9 +192,17 @@ export default function Cabinet() {
                   <div className="text-xs text-white/50 truncate">{user.email}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem onClick={() => navigate("/account")} className="cursor-pointer focus:bg-white/10 focus:text-white">
-                  <Icon name="User" size={15} className="mr-2" /> Профиль
+                <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer focus:bg-white/10 focus:text-white">
+                  <Icon name="User" size={15} className="mr-2" /> Мой профиль
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/account")} className="cursor-pointer focus:bg-white/10 focus:text-white">
+                  <Icon name="CreditCard" size={15} className="mr-2" /> Тариф и оплата
+                </DropdownMenuItem>
+                {user.isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer focus:bg-white/10 focus:text-white">
+                    <Icon name="ShieldCheck" size={15} className="mr-2 text-aqua" /> Админка
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => {
                     logout();

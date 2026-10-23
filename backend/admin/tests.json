@@ -1,0 +1,9 @@
+{
+  "tests": [
+    {"name": "OPTIONS preflight", "method": "OPTIONS", "path": "/", "expectedStatus": 200},
+    {"name": "Без авторизации — 401", "method": "GET", "path": "/", "expectedStatus": 401, "expectedBody": {"error": "string"}, "bodyMatcher": "partial"},
+    {"name": "Чужой токен — 401", "method": "GET", "path": "/", "headers": {"X-Auth-Token": "invalid"}, "expectedStatus": 401, "bodyMatcher": "partial"},
+    {"name": "Изменение без авторизации — 401", "method": "PUT", "path": "/", "body": {"id": 1, "plan": "pro"}, "expectedStatus": 401, "bodyMatcher": "partial"},
+    {"name": "Удаление без авторизации — 401", "method": "DELETE", "path": "/?id=2", "expectedStatus": 401, "bodyMatcher": "partial"}
+  ]
+}

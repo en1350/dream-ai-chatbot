@@ -22,6 +22,8 @@ import ResetPassword from "./pages/ResetPassword";
 import Help from "./pages/Help";
 import VerifyEmail from "./pages/VerifyEmail";
 import RequireAuth from "./components/RequireAuth";
+import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +43,8 @@ const App = () => (
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
+          <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+          <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
           <Route path="/cabinet" element={<RequireAuth><Cabinet /></RequireAuth>} />
           <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/builder/:botId" element={<RequireAuth><BotBuilder /></RequireAuth>} />

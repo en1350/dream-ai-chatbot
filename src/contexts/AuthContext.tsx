@@ -12,6 +12,7 @@ export interface User {
   plan: PlanId;
   createdAt: string | null;
   emailVerified?: boolean;
+  isAdmin?: boolean;
 }
 
 interface AuthCtx {
@@ -26,6 +27,8 @@ interface AuthCtx {
   deleteAccount: () => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   resendVerification: () => Promise<void>;
+  updateName: (name: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
@@ -161,11 +164,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.alreadyVerified) loadProfile();
   };
 
+  const updateProfile = async (payload: Record<string, string>) => {
+    const token = getToken();
+    if (!token) throw new Error("Требуется авторизация");
+    const res = await fetch(AUTH_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Auth-Token": token },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Не удалось сохранить");
+    setUser(data.user);
+  };
+
+  const updateName = (name: string) => updateProfile({ name });
+  const changePassword = (currentPassword: string, newPassword: string) =>
+    updateProfile({ currentPassword, newPassword });
+
   return (
     <Ctx.Provider
       value={{
         user, loading, register, login, logout, changePlan, forgotPassword, resetPassword, deleteAccount,
-        verifyEmail, resendVerification,
+        verifyEmail, resendVerification, updateName, changePassword,
       }}
     >
       {children}

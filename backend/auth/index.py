@@ -55,7 +55,7 @@ def verify_password(password: str, stored: str) -> bool:
     return secrets.compare_digest(hash_password(password, salt), digest)
 
 
-USER_COLS = "id, email, name, plan, created_at, email_verified"
+USER_COLS = "id, email, name, plan, created_at, email_verified, is_admin"
 
 
 def user_to_dict(row) -> dict:
@@ -66,6 +66,7 @@ def user_to_dict(row) -> dict:
         "plan": normalize_plan(row[3]),
         "createdAt": row[4].isoformat() if row[4] else None,
         "emailVerified": bool(row[5]) if len(row) > 5 else True,
+        "isAdmin": bool(row[6]) if len(row) > 6 else False,
     }
 
 
@@ -160,7 +161,7 @@ def send_reset_email(to_email: str, name: str, reset_url: str) -> bool:
 
 def get_user_by_token(cur, token: str):
     cur.execute(
-        f"""SELECT u.id, u.email, u.name, u.plan, u.created_at, u.email_verified
+        f"""SELECT u.id, u.email, u.name, u.plan, u.created_at, u.email_verified, u.is_admin
             FROM {SCHEMA}.sessions s
             JOIN {SCHEMA}.users u ON u.id = s.user_id
             WHERE s.token = %s AND (s.expires_at IS NULL OR s.expires_at > now())""",
@@ -170,7 +171,7 @@ def get_user_by_token(cur, token: str):
 
 
 def handler(event: dict, context) -> dict:
-    """Регистрация, вход, восстановление пароля, профиль и смена тарифа. POST ?action=register|login|forgot|reset, GET профиль, PUT смена тарифа."""
+    """Регистрация, вход, подтверждение email, восстановление пароля, профиль. POST ?action=register|login|verify|resend|forgot|reset, GET профиль, PUT смена имени/пароля, DELETE удаление аккаунта."""
     method = event.get("httpMethod", "GET")
     if method == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
@@ -284,7 +285,7 @@ def handler(event: dict, context) -> dict:
                     (email,),
                 )
                 row = cur.fetchone()
-                if not row or not verify_password(password, row[6]):
+                if not row or not verify_password(password, row[7]):
                     return resp(401, {"error": "Неверный email или пароль"})
                 new_token = secrets.token_hex(32)
                 cur.execute(
@@ -292,7 +293,7 @@ def handler(event: dict, context) -> dict:
                     (row[0], new_token),
                 )
                 conn.commit()
-                return resp(200, {"token": new_token, "user": user_to_dict(row[:6])})
+                return resp(200, {"token": new_token, "user": user_to_dict(row[:7])})
 
             if action == "forgot":
                 email = (body.get("email") or "").strip().lower()
@@ -353,13 +354,36 @@ def handler(event: dict, context) -> dict:
             user = get_user_by_token(cur, token)
             if not user:
                 return resp(401, {"error": "Сессия недействительна"})
-            plan = body.get("plan")
-            if plan not in PLANS:
-                return resp(400, {"error": "Неизвестный тариф"})
-            cur.execute(
-                f"UPDATE {SCHEMA}.users SET plan = %s WHERE id = %s RETURNING {USER_COLS}",
-                (plan, user[0]),
-            )
+            uid = user[0]
+
+            if "name" in body:
+                new_name = (body.get("name") or "").strip()
+                if len(new_name) < 2 or len(new_name) > 100:
+                    return resp(400, {"error": "Имя должно быть от 2 до 100 символов"})
+                cur.execute(f"UPDATE {SCHEMA}.users SET name = %s WHERE id = %s", (new_name, uid))
+
+            if "newPassword" in body:
+                current = body.get("currentPassword") or ""
+                new_password = body.get("newPassword") or ""
+                cur.execute(f"SELECT password_hash FROM {SCHEMA}.users WHERE id = %s", (uid,))
+                prow = cur.fetchone()
+                if not prow or not verify_password(current, prow[0]):
+                    conn.rollback()
+                    return resp(400, {"error": "Текущий пароль указан неверно"})
+                if len(new_password) < 6:
+                    conn.rollback()
+                    return resp(400, {"error": "Новый пароль должен быть не короче 6 символов"})
+                cur.execute(
+                    f"UPDATE {SCHEMA}.users SET password_hash = %s WHERE id = %s",
+                    (make_stored_hash(new_password), uid),
+                )
+                # Выходим со всех остальных устройств.
+                cur.execute(
+                    f"DELETE FROM {SCHEMA}.sessions WHERE user_id = %s AND token <> %s",
+                    (uid, token),
+                )
+
+            cur.execute(f"SELECT {USER_COLS} FROM {SCHEMA}.users WHERE id = %s", (uid,))
             updated = cur.fetchone()
             conn.commit()
             return resp(200, {"user": user_to_dict(updated)})

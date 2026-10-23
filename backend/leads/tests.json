@@ -7,10 +7,11 @@
       "expectedStatus": 200
     },
     {
-      "name": "Get leads list",
+      "name": "Список заявок без авторизации — 401",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
     }
   ]

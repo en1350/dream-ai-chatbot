@@ -3,7 +3,6 @@ import os
 import psycopg2
 
 SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
-DEFAULT_USER_ID = 1
 
 
 def get_conn():
@@ -14,8 +13,8 @@ def escape(value: str) -> str:
     return (value or "").replace("'", "''")
 
 
-def get_user_id(cur, event) -> int:
-    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+def get_user_id(cur, event) -> int | None:
+    """Определяет пользователя по токену входа (X-Auth-Token). None — если не авторизован."""
     headers = event.get("headers") or {}
     token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
     if token:
@@ -27,7 +26,7 @@ def get_user_id(cur, event) -> int:
         row = cur.fetchone()
         if row:
             return int(row[0])
-    return DEFAULT_USER_ID
+    return None
 
 
 def handler(event: dict, context) -> dict:
@@ -53,6 +52,8 @@ def handler(event: dict, context) -> dict:
     try:
         cur = conn.cursor()
         user_id = get_user_id(cur, event)
+        if user_id is None:
+            return {"statusCode": 401, "headers": headers, "body": json.dumps({"error": "Требуется авторизация"})}
 
         if method == "GET":
             bot_id = params.get("bot_id")

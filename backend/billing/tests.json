@@ -1,20 +1,19 @@
 {
   "tests": [
     {
-      "name": "Получить тариф, лимиты и баланс",
+      "name": "Тариф без авторизации — 401",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": {"planId": "string", "planName": "string", "balanceKopecks": 0},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
     },
-
     {
-      "name": "Некорректный тариф — ошибка",
+      "name": "Смена тарифа без авторизации — 401",
       "method": "PUT",
       "path": "/",
       "body": {"plan": "unknown"},
-      "expectedStatus": 400,
+      "expectedStatus": 401,
       "bodyMatcher": "partial"
     }
   ]

@@ -8,7 +8,6 @@ import urllib.error
 import psycopg2
 
 SCHEMA = os.environ.get("MAIN_DB_SCHEMA", "public")
-DEFAULT_USER_ID = 1
 
 YOOKASSA_API = "https://api.yookassa.ru/v3/payments"
 
@@ -21,8 +20,8 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
-def get_user_id(cur, event) -> int:
-    """Определяет пользователя по токену входа (X-Auth-Token). Фолбэк — DEFAULT_USER_ID."""
+def get_user_id(cur, event) -> int | None:
+    """Определяет пользователя по токену входа (X-Auth-Token). None — если не авторизован."""
     headers = event.get("headers") or {}
     token = headers.get("X-Auth-Token") or headers.get("x-auth-token") or ""
     if token:
@@ -34,7 +33,7 @@ def get_user_id(cur, event) -> int:
         row = cur.fetchone()
         if row:
             return int(row[0])
-    return DEFAULT_USER_ID
+    return None
 
 
 def cors_headers():
@@ -84,6 +83,23 @@ def yookassa_create_payment(amount_kopecks, description, return_url, idempotence
         return None, f"YooKassa request failed: {e}"
 
 
+def yookassa_get_payment(payment_id):
+    """Запрашивает реальный статус платежа у ЮKassa (защита от поддельных уведомлений)."""
+    shop_id = os.environ.get("YOOKASSA_SHOP_ID")
+    secret_key = os.environ.get("YOOKASSA_SECRET_KEY")
+    if not shop_id or not secret_key:
+        return None
+    auth = base64.b64encode(f"{shop_id}:{secret_key}".encode()).decode()
+    req = urllib.request.Request(f"{YOOKASSA_API}/{urllib.request.quote(payment_id)}", method="GET")
+    req.add_header("Authorization", f"Basic {auth}")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:  # noqa: BLE001
+        print(f"[yookassa] get payment failed: {e}")
+        return None
+
+
 def handler(event: dict, context) -> dict:
     """Кошелёк: пополнение баланса через ЮKassa. GET — список транзакций и быстрые суммы; POST {action:'topup', amountKopecks} — создать платёж; POST от ЮKassa (webhook) — зачислить средства после оплаты."""
     method = event.get("httpMethod", "GET")
@@ -94,7 +110,25 @@ def handler(event: dict, context) -> dict:
     conn = get_conn()
     try:
         cur = conn.cursor()
+
+        # Webhook от ЮKassa приходит без X-Auth-Token, поэтому распознаём его
+        # ДО проверки авторизации. Признак: событие payment.* с объектом платежа
+        # (проверяем именно наличие ключей — пустой object {} тоже webhook, не пополнение).
+        body = {}
+        if method == "POST":
+            try:
+                body = json.loads(event.get("body") or "{}")
+            except json.JSONDecodeError:
+                return json_resp(400, {"error": "Invalid JSON"})
+            if not isinstance(body, dict):
+                return json_resp(400, {"error": "Invalid JSON"})
+
+            if body.get("event") and "object" in body:
+                return handle_webhook(cur, conn, body)
+
         user_id = get_user_id(cur, event)
+        if user_id is None:
+            return json_resp(401, {"error": "Требуется авторизация"})
 
         if method == "GET":
             cur.execute(
@@ -126,16 +160,6 @@ def handler(event: dict, context) -> dict:
             })
 
         if method == "POST":
-            try:
-                body = json.loads(event.get("body") or "{}")
-            except json.JSONDecodeError:
-                return json_resp(400, {"error": "Invalid JSON"})
-
-            # Webhook от ЮKassa: событие payment.* с объектом платежа.
-            # Проверяем именно наличие ключей (пустой object {} тоже webhook, не пополнение).
-            if body.get("event") and "object" in body:
-                return handle_webhook(cur, conn, body)
-
             action = body.get("action", "topup")
             if action == "topup":
                 return handle_topup(cur, conn, body, user_id)
@@ -190,6 +214,13 @@ def handle_webhook(cur, conn, body):
         row = cur.fetchone()
         if row and row[3] == "pending":
             tx_id, user_id, amount = row[0], row[1], int(row[2])
+            real = yookassa_get_payment(payment_id)
+            if not real or real.get("status") != "succeeded" or real.get("paid") is not True:
+                return json_resp(200, {"ok": True})
+            real_kopecks = int(round(float((real.get("amount") or {}).get("value") or 0) * 100))
+            if real_kopecks != amount:
+                print(f"[yookassa] amount mismatch tx={tx_id} db={amount} real={real_kopecks}")
+                return json_resp(200, {"ok": True})
             cur.execute(
                 f"UPDATE {SCHEMA}.wallet_transactions SET status = 'succeeded', updated_at = now() WHERE id = {tx_id}"
             )

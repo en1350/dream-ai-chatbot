@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import Icon from "@/components/ui/icon";
@@ -10,7 +10,12 @@ const inputCls =
 export default function Auth() {
   const { user, login, register } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [searchParams] = useSearchParams();
+  const rawNext = searchParams.get("next") || "";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/cabinet";
+  const [mode, setMode] = useState<"login" | "register">(
+    searchParams.get("mode") === "register" ? "register" : "login"
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,8 +24,8 @@ export default function Auth() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (user) navigate("/account", { replace: true });
-  }, [user, navigate]);
+    if (user) navigate(next, { replace: true });
+  }, [user, navigate, next]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +41,7 @@ export default function Auth() {
       } else {
         await login({ email, password });
       }
-      navigate("/account", { replace: true });
+      navigate(next, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Что-то пошло не так");
     } finally {
@@ -76,7 +81,7 @@ export default function Auth() {
             {mode === "login" ? "С возвращением!" : "Создайте аккаунт"}
           </h1>
           <p className="text-white/50 text-sm mb-6">
-            {mode === "login" ? "Войдите в личный кабинет" : "Пара минут — и всё готово"}
+            {mode === "login" ? "Войдите в личный кабинет" : "7 дней бесплатно, без карты"}
           </p>
 
           <form onSubmit={submit} className="space-y-4">

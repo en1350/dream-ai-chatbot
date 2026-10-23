@@ -7,31 +7,32 @@
       "expectedStatus": 200
     },
     {
-      "name": "Get integrations list",
+      "name": "Список интеграций без авторизации — 401",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
     },
     {
-      "name": "POST without required fields returns 400",
+      "name": "POST без авторизации — 401",
       "method": "POST",
       "path": "/",
       "body": {},
-      "expectedStatus": 400
+      "expectedStatus": 401
     },
     {
-      "name": "Check without bot_id returns 400",
+      "name": "Проверка связи без bot_id и без авторизации — 401",
       "method": "GET",
       "path": "/?action=check",
-      "expectedStatus": 400
+      "expectedStatus": 401
     },
     {
-      "name": "Check with bot_id returns status",
+      "name": "Проверка связи с bot_id без авторизации — 401",
       "method": "GET",
       "path": "/?action=check&bot_id=999999",
-      "expectedStatus": 200,
-      "expectedBody": {"status": "string"},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
     }
   ]

@@ -32,11 +32,11 @@ export default function Navbar() {
           <ThemeToggle />
           {user ? (
             <Link
-              to="/account"
+              to="/cabinet"
               className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-full bg-white text-ink hover:bg-aqua transition-colors"
             >
-              <Icon name="User" size={16} />
-              <span className="hidden sm:inline">{user.name}</span>
+              <Icon name="LayoutDashboard" size={16} />
+              <span className="hidden sm:inline">Личный кабинет</span>
             </Link>
           ) : (
             <>
@@ -44,7 +44,7 @@ export default function Navbar() {
                 Войти
               </Link>
               <Link
-                to="/login"
+                to="/login?mode=register"
                 className="text-sm font-medium px-5 py-2 rounded-full bg-white text-ink hover:bg-aqua transition-colors"
               >
                 Начать бесплатно

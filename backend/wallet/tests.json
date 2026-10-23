@@ -1,19 +1,19 @@
 {
   "tests": [
     {
-      "name": "Баланс и транзакции",
+      "name": "Баланс без авторизации — 401",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": {"balanceKopecks": 0},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
     },
     {
-      "name": "Пополнение меньше минимума — ошибка",
+      "name": "Пополнение без авторизации — 401",
       "method": "POST",
       "path": "/",
       "body": {"action": "topup", "amountKopecks": 100},
-      "expectedStatus": 400,
+      "expectedStatus": 401,
       "bodyMatcher": "partial"
     },
     {

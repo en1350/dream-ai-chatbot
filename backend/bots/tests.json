@@ -7,33 +7,34 @@
       "expectedStatus": 200
     },
     {
-      "name": "Get bots list",
+      "name": "Список ботов без авторизации — 401",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
     },
     {
-      "name": "PUT without id returns 400",
+      "name": "PUT без id и без авторизации — 401",
       "method": "PUT",
       "path": "/",
       "body": {"status": "active"},
-      "expectedStatus": 400,
+      "expectedStatus": 401,
       "bodyMatcher": "partial"
     },
     {
-      "name": "PUT invalid status returns 400",
+      "name": "PUT с неверным статусом без авторизации — 401",
       "method": "PUT",
       "path": "/",
       "body": {"id": 1, "status": "wrong"},
-      "expectedStatus": 400,
+      "expectedStatus": 401,
       "bodyMatcher": "partial"
     },
     {
-      "name": "DELETE without id returns 400",
+      "name": "DELETE без id и без авторизации — 401",
       "method": "DELETE",
       "path": "/",
-      "expectedStatus": 400,
+      "expectedStatus": 401,
       "bodyMatcher": "partial"
     }
   ]

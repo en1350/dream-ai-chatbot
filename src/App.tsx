@@ -21,6 +21,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Help from "./pages/Help";
 import VerifyEmail from "./pages/VerifyEmail";
+import RequireAuth from "./components/RequireAuth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,11 +40,11 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/account" element={<Account />} />
-          <Route path="/cabinet" element={<Cabinet />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/builder/:botId" element={<BotBuilder />} />
-          <Route path="/landing-builder/:landingId" element={<LandingBuilder />} />
+          <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
+          <Route path="/cabinet" element={<RequireAuth><Cabinet /></RequireAuth>} />
+          <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+          <Route path="/builder/:botId" element={<RequireAuth><BotBuilder /></RequireAuth>} />
+          <Route path="/landing-builder/:landingId" element={<RequireAuth><LandingBuilder /></RequireAuth>} />
           <Route path="/l/:slug" element={<PublicLanding />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />

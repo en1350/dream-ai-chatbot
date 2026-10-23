@@ -7,16 +7,17 @@
       "expectedStatus": 200
     },
     {
-      "name": "Missing bot_id returns 400",
+      "name": "Без bot_id и без авторизации — 401",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 400
+      "expectedStatus": 401
     },
     {
-      "name": "Get existing bot scenario",
+      "name": "Сценарий бота без авторизации — 401",
       "method": "GET",
       "path": "/?bot_id=1",
-      "expectedStatus": 200,
+      "expectedStatus": 401,
+      "expectedBody": {"error": "string"},
       "bodyMatcher": "partial"
     }
   ]
